@@ -3,6 +3,9 @@ import logging
 import sys
 from fastapi.responses import JSONResponse
 
+# Import the users router
+from app.api.v1 import users
+
 app = FastAPI()
 
 # Setup structured JSON logging
@@ -22,3 +25,6 @@ async def startup_event():
 @app.get("/health")
 async def health_check():
     return JSONResponse(content={"status": "ok"})
+
+# Add this line to include your user routes
+app.include_router(users.router, prefix="/api/v1/users")
