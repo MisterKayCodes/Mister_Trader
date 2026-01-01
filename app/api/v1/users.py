@@ -8,6 +8,7 @@ router = APIRouter(
     tags=["users"]
 )
 
+
 # Test route to verify router is working
 @router.get("/test")
 async def test_route():
@@ -34,3 +35,27 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+#Get all users
+@router.get("/", response_model=list[UserRead])
+def get_all_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    return users
+
+# Delete user by ID
+@router.delete("/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"detail": "User deleted successfully"}
+
+
+#Delete all users
+@router.delete("/")
+def delete_all_users(db: Session = Depends(get_db)):
+    deleted = db.query(User).delete()
+    db.commit()
+    return {"detail": f"Deleted {deleted} users successfully"}
