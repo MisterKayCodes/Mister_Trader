@@ -4,7 +4,7 @@ import sys
 from fastapi.responses import JSONResponse
 
 # Import the users router
-from app.api.v1 import users
+from app.api.v1 import users, accounts
 
 app = FastAPI()
 
@@ -26,5 +26,7 @@ async def startup_event():
 async def health_check():
     return JSONResponse(content={"status": "ok"})
 
-# Add this line to include your user routes
+# Add this line to include your routes
 app.include_router(users.router, prefix="/api/v1/users")
+app.include_router(accounts.router, prefix="/api/v1/accounts")
+
