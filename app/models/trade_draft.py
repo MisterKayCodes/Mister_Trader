@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
@@ -9,13 +10,6 @@ class TradeDraft(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    user_id = Column(
-        Integer,
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
     account_id = Column(
         Integer,
         ForeignKey("accounts.id", ondelete="CASCADE"),
@@ -23,13 +17,18 @@ class TradeDraft(Base):
         index=True,
     )
 
-    # Partial payload from the waterfall UI
-    draft_payload = Column(JSON, nullable=False)
+    symbol = Column(String(20), nullable=False)
+    side = Column(String(10), nullable=False)  # BUY or SELL
+    quantity = Column(Float, nullable=False)
+    price = Column(Float, nullable=True)
 
-    created_at = Column(
+    status = Column(String(20), default="draft")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False,
+        onupdate=func.now(),
     )
 
-    expires_at = Column(DateTime(timezone=True), nullable=False)
+    account = relationship("Account", backref="trade_drafts")

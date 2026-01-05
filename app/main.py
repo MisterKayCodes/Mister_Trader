@@ -4,7 +4,7 @@ import sys
 from fastapi.responses import JSONResponse
 
 # Import the users router
-from app.api.v1 import users, accounts
+from app.api.v1 import users, accounts, trade_drafts
 
 app = FastAPI()
 
@@ -29,4 +29,5 @@ async def health_check():
 # Add this line to include your routes
 app.include_router(users.router, prefix="/api/v1/users")
 app.include_router(accounts.router, prefix="/api/v1/accounts")
+app.include_router(trade_drafts.router, prefix="/api/v1/trade-drafts")
 
