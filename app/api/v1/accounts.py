@@ -3,56 +3,49 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.models.account import Account
 from app.schemas.account import AccountCreate, AccountRead
+from app.services import account_service
 
 router = APIRouter(tags=["accounts"])
 
-MAX_ACCOUNTS_PER_USER = 6
 
 @router.post("/", response_model=AccountRead)
 def create_account(account: AccountCreate, db: Session = Depends(get_db)):
-    # Count existing accounts for the user
-    count = db.query(Account).filter(Account.user_id == account.user_id).count()
-    if count >= MAX_ACCOUNTS_PER_USER:
-        raise HTTPException(status_code=400, detail="Maximum number of accounts reached")
-    
-    new_account = Account(user_id=account.user_id, name=account.name)
-    db.add(new_account)
-    db.commit()
-    db.refresh(new_account)
-    return new_account
+    try:
+        return account_service.create_account(
+            db=db,
+            user_id=account.user_id,
+            name=account.name
+        )
+    except ValueError as e:
+        if str(e) == "MAX_ACCOUNTS_REACHED":
+            raise HTTPException(status_code=400, detail="Maximum number of accounts reached")
 
 
 @router.get("/", response_model=List[AccountRead])
 def list_accounts(user_id: int, db: Session = Depends(get_db)):
-    accounts = db.query(Account).filter(Account.user_id == user_id).all()
-    return accounts
+    return account_service.list_accounts(db, user_id)
+
 
 @router.get("/{account_id}", response_model=AccountRead)
 def get_account(account_id: int, db: Session = Depends(get_db)):
-    account = db.query(Account).filter(Account.id == account_id).first()
+    account = account_service.get_account(db, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     return account
 
 
 @router.put("/{account_id}", response_model=AccountRead)
-def update_account(account_id: int, account_update: AccountCreate, db: Session = Depends(get_db)):
-    account = db.query(Account).filter(Account.id == account_id).first()
-    if not account:
+def update_account(account_id: int, account: AccountCreate, db: Session = Depends(get_db)):
+    updated = account_service.update_account(db, account_id, account.name)
+    if not updated:
         raise HTTPException(status_code=404, detail="Account not found")
-    
-    account.name = account_update.name
-    db.commit()
-    db.refresh(account)
-    return account
+    return updated
+
 
 @router.delete("/{account_id}")
 def delete_account(account_id: int, db: Session = Depends(get_db)):
-    account = db.query(Account).filter(Account.id == account_id).first()
-    if not account:
+    success = account_service.delete_account(db, account_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Account not found")
-    db.delete(account)
-    db.commit()
     return {"detail": "Account deleted successfully"}
