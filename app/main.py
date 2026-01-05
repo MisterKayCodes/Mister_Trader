@@ -4,7 +4,7 @@ import sys
 from fastapi.responses import JSONResponse
 
 # Import the users router
-from app.api.v1 import users, accounts, trade_drafts, trades
+from app.api.v1 import users, accounts, trade_drafts, trades, activity
 
 app = FastAPI()
 
@@ -31,3 +31,4 @@ app.include_router(users.router, prefix="/api/v1/users")
 app.include_router(accounts.router, prefix="/api/v1/accounts")
 app.include_router(trade_drafts.router, prefix="/api/v1/trade-drafts")
 app.include_router(trades.router, prefix="/api/v1/trades")
+app.include_router(activity.router, prefix="/api/v1/activities")
