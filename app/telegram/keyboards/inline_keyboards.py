@@ -5,6 +5,7 @@ def get_account_options():
     buttons = [
         [InlineKeyboardButton(text="➕ Create Account", callback_data="account_create")],
         [InlineKeyboardButton(text="🔄 Switch Active", callback_data="account_switch")],
+        [InlineKeyboardButton(text="🗑️ Delete Account", callback_data="account_delete")],
         [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

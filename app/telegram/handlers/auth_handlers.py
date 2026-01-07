@@ -13,22 +13,25 @@ logger = logging.getLogger(__name__)
 async def cmd_start(message: Message, state: FSMContext):
     """
     Rule 6: Check for existing session. Redirect to menu if token exists.
+    Using HTML mode for cleaner 2026 formatting.
     """
-    user_data = await state.get_data()
+    # Fix: Persistent storage can return None for empty states. Fallback to empty dict.
+    user_data = await state.get_data() or {}
     auth_token = user_data.get("access_token")
 
     if auth_token:
         await message.answer(
-            "👋 *Welcome back to Mister\_Trader\!*\n"
-            "Your session is active\. Use the menu below\.",
-            reply_markup=get_main_menu()
+            "👋 <b>Welcome back to Mister Trader!</b>\n\n"
+            "Your session is active. Use the menu below to manage your journal.",
+            reply_markup=get_main_menu(),
+            parse_mode="HTML"
         )
     else:
-        # MarkdownV2 requires escaping dots and dashes
         await message.answer(
-            "Welcome to Mister\_Trader\!\n\n"
-            "1\. `/signup 1234` \- Create your account\n"
-            "2\. `/login 1234` \- Access your dashboard"
+            "🚀 <b>Welcome to Mister Trader</b>\n\n"
+            "1. <code>/signup 1234</code> - Create your account\n"
+            "2. <code>/login 1234</code> - Access your dashboard",
+            parse_mode="HTML"
         )
 
 async def cmd_signup(message: Message):
@@ -36,7 +39,7 @@ async def cmd_signup(message: Message):
     parts = message.text.split()
 
     if len(parts) != 2 or not parts[1].isdigit():
-        return await message.answer("❌ Format: ` /signup 1234 `")
+        return await message.answer("❌ <b>Format Error:</b> Use <code>/signup 1234</code>", parse_mode="HTML")
 
     pin = parts[1]
     
@@ -49,22 +52,21 @@ async def cmd_signup(message: Message):
             )
             
             if response.status_code == 201:
-                await message.answer("✅ Registration successful\! Use `/login` to start\.")
+                await message.answer("✅ <b>Registration successful!</b>\nUse <code>/login 1234</code> to start.", parse_mode="HTML")
             elif response.status_code == 400:
-                await message.answer("ℹ️ You are already registered\.")
+                await message.answer("ℹ️ <b>Already registered.</b>", parse_mode="HTML")
             else:
-                await message.answer("❌ Registration failed\.")
+                await message.answer("❌ <b>Registration failed.</b>", parse_mode="HTML")
         except Exception as e:
             logger.error(f"Signup error: {e}")
-            await message.answer("🔌 Backend unreachable\.")
+            await message.answer("🔌 <b>Backend unreachable.</b>", parse_mode="HTML")
 
 async def cmd_login(message: Message, state: FSMContext):
-    """Rule 14: JWT Auth + Rule 1: Save session state."""
     user_id = message.from_user.id
     parts = message.text.split()
 
     if len(parts) != 2 or not parts[1].isdigit():
-        return await message.answer("❌ Format: ` /login 1234 `")
+        return await message.answer("❌ <b>Format Error:</b> Use <code>/login 1234</code>", parse_mode="HTML")
 
     pin = parts[1]
 
@@ -80,10 +82,9 @@ async def cmd_login(message: Message, state: FSMContext):
                 token_data = login_resp.json()
                 access_token = token_data.get("access_token")
 
-                # Save token in FSM state
+                # Rule 1: Save state (aiogram handles internal dict creation if None)
                 await state.update_data(access_token=access_token)
 
-                # Check for accounts
                 acc_resp = await client.get(
                     f"{BOT_BACKEND_URL}/api/v1/accounts",
                     headers={"Authorization": f"Bearer {access_token}"},
@@ -93,27 +94,30 @@ async def cmd_login(message: Message, state: FSMContext):
                 if acc_resp.status_code == 200:
                     accounts = acc_resp.json()
                     
-                    if not accounts or (isinstance(accounts, list) and len(accounts) == 0):
+                    if not accounts:
                         await message.answer(
-                            "✅ *Login successful\!*\n\n"
-                            "You don't have a vault yet\. Enter a **Name** for your first account:"
+                            "✅ <b>Login successful!</b>\n\n"
+                            "You don't have a vault yet. Please enter a <b>Name</b> for your first account (e.g. Personal):",
+                            parse_mode="HTML"
                         )
                         await state.set_state(AccountStates.waiting_for_name)
                     else:
                         active_name = accounts[0]['name'] if isinstance(accounts, list) else accounts.get('name')
                         await message.answer(
-                            f"✅ *Login successful\!*\nActive Vault: `{active_name}`",
-                            reply_markup=get_main_menu()
+                            f"✅ <b>Login successful!</b>\n\n"
+                            f"<b>Active Vault:</b> <code>{active_name}</code>",
+                            reply_markup=get_main_menu(),
+                            parse_mode="HTML"
                         )
                 else:
-                    await message.answer("✅ *Login successful\!*\nEnter a **Name** for your first vault:")
+                    await message.answer("✅ <b>Login successful!</b>\nEnter a name for your first vault:", parse_mode="HTML")
                     await state.set_state(AccountStates.waiting_for_name)
             
             elif login_resp.status_code == 401:
-                await message.answer("❌ Invalid PIN\. Access denied\.")
+                await message.answer("❌ <b>Invalid PIN.</b> Access denied.", parse_mode="HTML")
             else:
-                await message.answer("⚠️ System error during login\.")
+                await message.answer("⚠️ <b>System error during login.</b>", parse_mode="HTML")
                 
         except Exception as e:
             logger.error(f"Login failure: {e}")
-            await message.answer("🔌 Connection failure\.")
+            await message.answer("🔌 <b>Connection failure.</b>", parse_mode="HTML")

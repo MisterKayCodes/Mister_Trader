@@ -12,48 +12,54 @@ router = Router()
 async def handle_accounts_menu(message: Message):
     """Maps to /api/v1/accounts"""
     await message.answer(
-        "📁 *Vault & Account Management*\n"
-        "Manage your different trading accounts and switch your active context\.",
-        reply_markup=ik.get_account_options()
+        "📁 <b>Vault & Account Management</b>\n"
+        "Manage your different trading accounts and switch your active context.",
+        reply_markup=ik.get_account_options(),
+        parse_mode="HTML"
     )
 
 async def handle_trades_menu(message: Message):
     """Maps to /api/v1/trades"""
     await message.answer(
-        "📊 *Trade Management*\n"
-        "Monitor active positions or log new entries in your journal\.",
-        reply_markup=ik.get_trade_management()
+        "📊 <b>Trade Management</b>\n"
+        "Monitor active positions or log new entries in your journal.",
+        reply_markup=ik.get_trade_management(),
+        parse_mode="HTML"
     )
 
 async def handle_psychology_menu(message: Message):
     """Maps to /api/v1/trade-psychology"""
     await message.answer(
-        "🧠 *Psychology & Discipline*\n"
-        "Review your emotional state and plan adherence stats\.",
-        reply_markup=ik.get_psychology_tools()
+        "🧠 <b>Psychology & Discipline</b>\n"
+        "Review your emotional state and plan adherence stats.",
+        reply_markup=ik.get_psychology_tools(),
+        parse_mode="HTML"
     )
 
 async def handle_media_menu(message: Message):
     """Maps to /api/v1/trade-media"""
     await message.answer(
-        "🖼️ *Trade Media*\n"
-        "View and upload screenshots of your setups and executions\.",
-        reply_markup=ik.get_media_options()
+        "🖼️ <b>Trade Media</b>\n"
+        "View and upload screenshots of your setups and executions.",
+        reply_markup=ik.get_media_options(),
+        parse_mode="HTML"
     )
 
 async def handle_activity_menu(message: Message):
     """Maps to /api/v1/activities"""
     await message.answer(
-        "📈 *System Activity*\n"
-        "Review your recent logs and system interactions\.",
-        reply_markup=ik.get_activity_log()
+        "📈 <b>System Activity</b>\n"
+        "Review your recent logs and system interactions.",
+        reply_markup=ik.get_activity_log(),
+        parse_mode="HTML"
     )
 
 async def handle_back_to_main(message: Message):
     """Rule 7: Graceful recovery to home state."""
     await message.answer(
-        "🔙 *Returned to Main Menu*",
-        reply_markup=rk.get_main_menu()
+        "🔙 <b>Returned to Main Menu</b>",
+        reply_markup=rk.get_main_menu(),
+        parse_mode="HTML"
     )
 
 # --- INLINE CALLBACK HANDLERS (Generic Actions) ---
@@ -65,7 +71,8 @@ async def handle_menu_callback(callback: CallbackQuery):
     """
     if callback.data == "menu_main":
         await callback.message.edit_text(
-            "🏠 *Main Menu*\nSelect a category from the bottom keyboard\."
+            "🏠 <b>Main Menu</b>\nSelect a category from the bottom keyboard.",
+            parse_mode="HTML"
         )
     await callback.answer()
 
