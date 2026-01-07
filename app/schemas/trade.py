@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 
+# Rule 4: Explicit and readable base attributes
 class TradeBase(BaseModel):
     symbol: str
     side: str
@@ -14,17 +15,17 @@ class TradeBase(BaseModel):
 
 class TradeCreate(TradeBase):
     account_id: int
-    user_id: Optional[int] = None  # if you want to allow setting this on create
+    # Rule 1: Remove user_id here. The backend now gets it from the JWT badge.
 
 class TradeRead(TradeBase):
     id: int
     account_id: int
-    user_id: Optional[int] = None
+    user_id: int # Rule 1: No longer optional in the model or read schema
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    # Rule 13: Standard 2026 Pydantic V2 configuration
+    model_config = ConfigDict(from_attributes=True)
 
 class TradeUpdate(BaseModel):
     symbol: Optional[str] = None
@@ -35,6 +36,7 @@ class TradeUpdate(BaseModel):
     state: Optional[str] = None
     open_timestamp: Optional[datetime] = None
     close_timestamp: Optional[datetime] = None
-
-    class Config:
-        orm_mode = True
+    # Rule 13: Standard 2026 Pydantic V2 configuration
+    model_config = ConfigDict(from_attributes=True)
+    
+# Note: No user_id or account_id in update schema to prevent unauthorized changes.

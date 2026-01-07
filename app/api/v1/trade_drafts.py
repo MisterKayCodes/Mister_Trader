@@ -1,51 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.models.trade_draft import TradeDraft
 from app.schemas.trade_draft import TradeDraftCreate, TradeDraftRead, TradeDraftUpdate
+from app.api.v1.deps import get_current_user
+import app.services.draft_service as draft_service 
 
 router = APIRouter(tags=["trade-drafts"])
 
-@router.post("/", response_model=TradeDraftRead)
-def create_trade_draft(draft: TradeDraftCreate, db: Session = Depends(get_db)):
-    new_draft = TradeDraft(**draft.dict())
-    db.add(new_draft)
-    db.commit()
-    db.refresh(new_draft)
-    return new_draft
+@router.post("/", response_model=TradeDraftRead, status_code=status.HTTP_201_CREATED)
+def create_trade_draft(
+    payload: TradeDraftCreate, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    try:
+        return draft_service.create_draft(db, user_id=current_user.id, draft_in=payload.model_dump())
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Not authorized for this account")
 
 @router.get("/", response_model=List[TradeDraftRead])
-def list_trade_drafts(account_id: int, db: Session = Depends(get_db)):
-    return db.query(TradeDraft).filter(TradeDraft.account_id == account_id).all()
-
-@router.get("/{draft_id}", response_model=TradeDraftRead)
-def get_trade_draft(draft_id: int, db: Session = Depends(get_db)):
-    draft = db.query(TradeDraft).filter(TradeDraft.id == draft_id).first()
-    if not draft:
-        raise HTTPException(status_code=404, detail="Trade draft not found")
-    return draft
-
-@router.put("/{draft_id}", response_model=TradeDraftRead)
-def update_trade_draft(draft_id: int, draft_update: TradeDraftUpdate, db: Session = Depends(get_db)):
-    draft = db.query(TradeDraft).filter(TradeDraft.id == draft_id).first()
-    if not draft:
-        raise HTTPException(status_code=404, detail="Trade draft not found")
-    
-    for key, value in draft_update.dict(exclude_unset=True).items():
-        setattr(draft, key, value)
-    
-    db.commit()
-    db.refresh(draft)
-    return draft
-
-@router.delete("/{draft_id}")
-def delete_trade_draft(draft_id: int, db: Session = Depends(get_db)):
-    draft = db.query(TradeDraft).filter(TradeDraft.id == draft_id).first()
-    if not draft:
-        raise HTTPException(status_code=404, detail="Trade draft not found")
-
-    db.delete(draft)
-    db.commit()
-    return {"detail": "Trade draft deleted"}
+def list_trade_drafts(
+    account_id: int, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Rule 14: strictly filter by account and owner."""
+    return draft_service.list_drafts(db, user_id=current_user.id, account_id=account_id)

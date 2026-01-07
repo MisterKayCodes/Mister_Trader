@@ -1,11 +1,13 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-import os
+from app.core.config import settings 
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mister_trader.db")
+# Rule 1: Using a verified, known state from settings
+DATABASE_URL = settings.DATABASE_URL
 
 engine = create_engine(
     DATABASE_URL,
+    # Rule 13: Standard 2026 SQLite handling
     connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
 )
 
@@ -18,6 +20,7 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 def get_db():
+    """Rule 7: Ensure session recovery and closure."""
     db = SessionLocal()
     try:
         yield db

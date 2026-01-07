@@ -1,64 +1,75 @@
-import os
 import logging
-from dotenv import load_dotenv
-
-from aiogram import Bot, Dispatcher, types
+import asyncio
+import httpx
+import os
+from aiogram import Bot, Dispatcher
 from aiogram.filters.command import Command
 from aiogram.types import Message
-import httpx
-import asyncio
+from dotenv import load_dotenv
 
-# Load environment variables from .env
+# Rule 11: Bot is an external integration; it needs to know where the backend lives
 load_dotenv()
+BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-API_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
-
-# Setup logging
+# Setup logging (Rule 10: Observability)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize bot and dispatcher
-bot = Bot(token=API_TOKEN)
+# Rule 1: Use verified local env for bot state
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
-
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
-    user_id = message.from_user.id
-    logger.info(f"User {user_id} started the bot")
+    # Rule 6: Explicit commands only
+    await message.answer(
+        "Welcome to Mister_Trader!\n\n"
+        "To register, please use the /signup command followed by a 4-digit PIN.\n"
+        "Example: `/signup 1234`",
+        parse_mode="Markdown"
+    )
 
-    # Prepare data to send to backend API
-    user_data = {"telegram_user_id": user_id}
+@dp.message(Command("signup"))
+async def cmd_signup(message: Message):
+    user_id = message.from_user.id
+    command_args = message.text.split()
+
+    # Rule 4: Explicit check for PIN format
+    if len(command_args) != 2 or not command_args[1].isdigit():
+        return await message.answer("❌ Invalid format. Use: `/signup 1234`")
+
+    pin = command_args[1]
+    user_data = {"telegram_user_id": user_id, "pin": pin}
 
     async with httpx.AsyncClient() as client:
         try:
-            # Try to create user via POST /api/v1/users/
-            response = await client.post(f"{BACKEND_API_URL}/api/v1/users/", json=user_data)
+            # Rule 13: Pointing to the new Phase 1 Auth endpoint
+            response = await client.post(
+                f"{BOT_BACKEND_URL}/api/v1/users/signup", 
+                json=user_data,
+                timeout=10.0
+            )
 
-            if response.status_code == 400:
-                # User already exists - fetch their data via GET /api/v1/users/{id}
-                # Since we only have telegram_user_id, you might want an endpoint to get user by telegram_user_id,
-                # but for simplicity here we just inform user already registered.
-                await message.answer("You are already registered in the system!")
-            elif response.status_code == 200 or response.status_code == 201:
-                user_info = response.json()
-                await message.answer(f"Welcome! Your user ID {user_info['id']} has been registered.")
+            if response.status_code == 201:
+                await message.answer("✅ Registration successful! You can now log in.")
+            elif response.status_code == 400:
+                await message.answer("ℹ️ You are already registered.")
             else:
-                logger.error(f"Unexpected response {response.status_code}: {response.text}")
-                await message.answer("Sorry, something went wrong with registration. Please try again later.")
-        except httpx.RequestError as e:
-            logger.error(f"Error connecting to backend API: {e}")
-            await message.answer("Could not connect to the backend server. Please try again later.")
+                logger.error(f"Backend Error {response.status_code}")
+                await message.answer("❌ Registration failed. System error.")
 
+        except httpx.RequestError as e:
+            # Rule 7: Design for recovery if backend is down
+            logger.error(f"Connection Failure: {e}")
+            await message.answer("🔌 Could not connect to the backend server.")
 
 async def main():
+    logger.info("--- Starting Telegram Bot (Auth Mode 2026) ---")
     try:
-        logger.info("Starting Telegram bot...")
         await dp.start_polling(bot)
     finally:
         await bot.session.close()
-
 
 if __name__ == "__main__":
     asyncio.run(main())

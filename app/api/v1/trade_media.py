@@ -1,84 +1,48 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-# Rule 13: Using the explicit names we defined in the schema file
 from app.schemas.trade_media import TradeMediaCreate, TradeMediaRead
-from app.services import media_service
+from app.api.v1.deps import get_current_user
 
-router = APIRouter(
-    # Rule 13: Standardized naming (matches your main.py registration)
-    tags=["trade_media"]
-)
+# Rule 1: Use direct module import to break circular dependency
+import app.services.media_service as media_service 
 
-@router.post(
-    "", # Rule 13: Use empty string to avoid the double-slash // issue
-    response_model=TradeMediaRead, # FIXED: Changed from MediaRead
-    status_code=status.HTTP_201_CREATED
-)
+# Rule 13: Prefix is removed here because it is defined globally in main.py
+# This prevents "Double Prefixing" (/api/v1/trade-media/trade-media/)
+router = APIRouter(tags=["Trade Media"])
+
+@router.post("/", response_model=TradeMediaRead, status_code=status.HTTP_201_CREATED)
 def create_media(
-    media: TradeMediaCreate, # FIXED: Changed from MediaCreate
-    db: Session = Depends(get_db)
+    payload: TradeMediaCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
     """
-    Rule 1: Create a new media entry. Ensures system state is tracked.
+    Rule 11: Route extracts user_id from JWT and passes clean data to service.
+    Rule 14: Data ownership is enforced by injecting current_user.id.
     """
-    try:
-        return media_service.create_trade_media(
-            db=db,
-            trade_id=media.trade_id,
-            media_type=media.type,
-            file_path=media.file_path,
-        )
-    except RuntimeError as e:
-        # Rule 12: Handle errors explicitly
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+    return media_service.create_trade_media(
+        db=db,
+        user_id=current_user.id,
+        trade_id=payload.trade_id,
+        media_type=payload.type,
+        file_path=payload.file_path
+    )
 
-@router.get(
-    "/trade/{trade_id}",
-    # FIXED: Changed from MediaRead
-    response_model=List[TradeMediaRead]
-)
-def list_media_for_trade(
+@router.get("/trade/{trade_id}", response_model=List[TradeMediaRead])
+def list_media(
     trade_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
-    return media_service.list_trade_media(db, trade_id)
-
-@router.get(
-    "/{media_id}",
-    # FIXED: Changed from MediaRead
-    response_model=TradeMediaRead
-)
-def get_media(
-    media_id: int,
-    db: Session = Depends(get_db)
-):
-    media = media_service.get_trade_media(db, media_id)
-    if not media:
-        # Rule 1: Unknown entities return 404
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Media not found"
-        )
-    return media
-
-@router.delete(
-    "/{media_id}",
-    status_code=status.HTTP_204_NO_CONTENT
-)
-def delete_media(
-    media_id: int,
-    db: Session = Depends(get_db)
-):
-    success = media_service.delete_trade_media(db, media_id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Media not found"
-        )
-    return None # 204 No Content returns nothing
+    """
+    Rule 14: List media for a specific trade strictly owned by the user.
+    Uses Rule 6 (No Guessing) to ensure users only see their own records.
+    """
+    return media_service.list_trade_media(
+        db=db,
+        user_id=current_user.id,
+        trade_id=trade_id
+    )

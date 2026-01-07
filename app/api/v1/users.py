@@ -1,61 +1,34 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.user import User
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserCreate, UserRead, Token
+from app.services import auth_service # Rule 11: Logic lives in services
+from app.core.security import create_access_token
 
-router = APIRouter(
-    tags=["users"]
-)
+router = APIRouter(tags=["users"])
 
+@router.post("/signup", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+def signup(user_in: UserCreate, db: Session = Depends(get_db)):
+    # Rule 5: Idempotency check before creating
+    existing = auth_service.get_user_by_telegram_id(db, user_in.telegram_user_id)
+    if existing:
+        raise HTTPException(status_code=400, detail="User already registered")
+    return auth_service.create_user(db, user_in)
 
-# Test route to verify router is working
-@router.get("/test")
-async def test_route():
-    return {"message": "Users router is working"}
-
-# Create a new user
-@router.post("/", response_model=UserRead)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    # Check if user with this telegram_user_id already exists
-    existing_user = db.query(User).filter(User.telegram_user_id == user.telegram_user_id).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Telegram user already registered")
+@router.post("/login", response_model=Token)
+def login(user_in: UserCreate, db: Session = Depends(get_db)):
+    # Rule 6: No guessing - check credentials explicitly
+    user = auth_service.authenticate_user(db, user_in.telegram_user_id, user_in.pin)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
-    new_user = User(telegram_user_id=user.telegram_user_id)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+    # Rule 1: Known state - generate a verifiable session badge
+    token = create_access_token(data={"sub": str(user.telegram_user_id)})
+    return {"access_token": token, "token_type": "bearer"}
 
-# Get user by ID
 @router.get("/{user_id}", response_model=UserRead)
 def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = auth_service.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
-
-#Get all users
-@router.get("/", response_model=list[UserRead])
-def get_all_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return users
-
-# Delete user by ID
-@router.delete("/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    db.delete(user)
-    db.commit()
-    return {"detail": "User deleted successfully"}
-
-
-#Delete all users
-@router.delete("/")
-def delete_all_users(db: Session = Depends(get_db)):
-    deleted = db.query(User).delete()
-    db.commit()
-    return {"detail": f"Deleted {deleted} users successfully"}

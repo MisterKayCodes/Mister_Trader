@@ -4,10 +4,16 @@ from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class Trade(Base):
+    """
+    Rule 1: Every trade must belong to a known user and account.
+    Rule 14: Strict ownership enforced via non-nullable user_id.
+    """
     __tablename__ = "trades"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    
+    # FIX: Changed nullable=True to False to enforce Auth rules
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False, index=True)
 
     symbol = Column(String(20), nullable=False)
@@ -22,5 +28,6 @@ class Trade(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    # Rule 13: Clean relationships
     account = relationship("Account", backref="trades")
     user = relationship("User", backref="trades")

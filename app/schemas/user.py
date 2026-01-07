@@ -1,13 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
-class UserCreate(BaseModel):
+class UserBase(BaseModel):
     telegram_user_id: int
 
-class UserRead(BaseModel):
+class UserCreate(UserBase):
+    # Rule 14: PIN is required for signup/login but never returned in Read
+    pin: str 
+
+class UserRead(UserBase):
     id: int
-    telegram_user_id: int
     created_at: datetime
+    # Rule 13: Using 2026 Pydantic V2 config (fixes UserWarnings)
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
+class Token(BaseModel):
+    access_token: str
+    token_type: str

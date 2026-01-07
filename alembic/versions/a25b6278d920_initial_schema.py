@@ -1,8 +1,8 @@
-"""Create initial tables for phase 1 models
+"""initial_schema
 
-Revision ID: c2990013254d
+Revision ID: a25b6278d920
 Revises: 
-Create Date: 2025-12-31 11:24:04.773747
+Create Date: 2026-01-06 09:40:03.457426
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c2990013254d'
+revision: str = 'a25b6278d920'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,6 +35,8 @@ def upgrade() -> None:
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('telegram_user_id', sa.BigInteger(), nullable=False),
+    sa.Column('hashed_pin', sa.String(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -54,28 +56,30 @@ def upgrade() -> None:
     op.create_index(op.f('ix_accounts_user_id'), 'accounts', ['user_id'], unique=False)
     op.create_table('trade_drafts',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('account_id', sa.Integer(), nullable=False),
-    sa.Column('draft_payload', sa.JSON(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('symbol', sa.String(length=20), nullable=False),
+    sa.Column('side', sa.String(length=10), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('price', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(length=20), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
     sa.ForeignKeyConstraint(['account_id'], ['accounts.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_trade_drafts_account_id'), 'trade_drafts', ['account_id'], unique=False)
     op.create_index(op.f('ix_trade_drafts_id'), 'trade_drafts', ['id'], unique=False)
-    op.create_index(op.f('ix_trade_drafts_user_id'), 'trade_drafts', ['user_id'], unique=False)
     op.create_table('trades',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('account_id', sa.Integer(), nullable=False),
     sa.Column('symbol', sa.String(length=20), nullable=False),
-    sa.Column('direction', sa.Enum('BUY', 'SELL', name='direction_enum'), nullable=False),
-    sa.Column('entry_price', sa.Float(), nullable=False),
+    sa.Column('side', sa.String(length=10), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('entry_price', sa.Float(), nullable=True),
     sa.Column('exit_price', sa.Float(), nullable=True),
-    sa.Column('state', sa.Enum('OPEN', 'CLOSED', name='tradestate'), nullable=False),
-    sa.Column('open_timestamp', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('state', sa.String(length=20), nullable=True),
+    sa.Column('open_timestamp', sa.DateTime(timezone=True), nullable=True),
     sa.Column('close_timestamp', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
@@ -85,7 +89,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_trades_account_id'), 'trades', ['account_id'], unique=False)
     op.create_index(op.f('ix_trades_id'), 'trades', ['id'], unique=False)
-    op.create_index(op.f('ix_trades_state'), 'trades', ['state'], unique=False)
     op.create_index(op.f('ix_trades_user_id'), 'trades', ['user_id'], unique=False)
     op.create_table('trade_media',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -104,6 +107,7 @@ def upgrade() -> None:
     sa.Column('discipline', sa.Enum('LOW', 'MEDIUM', 'HIGH', name='disciplinelevel'), nullable=False),
     sa.Column('confidence', sa.Enum('LOW', 'MEDIUM', 'HIGH', name='confidencelevel'), nullable=False),
     sa.Column('followed_plan', sa.Boolean(), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['trade_id'], ['trades.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
@@ -137,11 +141,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_trade_media_id'), table_name='trade_media')
     op.drop_table('trade_media')
     op.drop_index(op.f('ix_trades_user_id'), table_name='trades')
-    op.drop_index(op.f('ix_trades_state'), table_name='trades')
     op.drop_index(op.f('ix_trades_id'), table_name='trades')
     op.drop_index(op.f('ix_trades_account_id'), table_name='trades')
     op.drop_table('trades')
-    op.drop_index(op.f('ix_trade_drafts_user_id'), table_name='trade_drafts')
     op.drop_index(op.f('ix_trade_drafts_id'), table_name='trade_drafts')
     op.drop_index(op.f('ix_trade_drafts_account_id'), table_name='trade_drafts')
     op.drop_table('trade_drafts')

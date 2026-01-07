@@ -1,13 +1,16 @@
 import logging
+from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from app.models.voice_note import VoiceNote
 
 logger = logging.getLogger(__name__)
 
-def create_voice_note(db: Session, trade_id: int, file_path: str, trade_state_at_time) -> VoiceNote:
+def create_voice_note(db: Session, user_id: int, trade_id: int, file_path: str, trade_state_at_time: str) -> VoiceNote:
     try:
+        # Rule 1: Link record to the authenticated user_id
         note = VoiceNote(
+            user_id=user_id,
             trade_id=trade_id,
             file_path=file_path,
             trade_state_at_time=trade_state_at_time
@@ -21,14 +24,18 @@ def create_voice_note(db: Session, trade_id: int, file_path: str, trade_state_at
         logger.error(f"Failed to create VoiceNote for trade {trade_id}: {e}")
         raise RuntimeError("Failed to create voice note.")
 
-def list_voice_notes(db: Session, trade_id: int):
-    return db.query(VoiceNote).filter(VoiceNote.trade_id == trade_id).all()
+def list_voice_notes(db: Session, trade_id: int, user_id: int):
+    # Rule 14: Filter by user_id to prevent data leaking
+    stmt = select(VoiceNote).where(and_(VoiceNote.trade_id == trade_id, VoiceNote.user_id == user_id))
+    return db.execute(stmt).scalars().all()
 
-def get_voice_note(db: Session, note_id: int):
-    return db.query(VoiceNote).filter(VoiceNote.id == note_id).first()
+def get_voice_note(db: Session, note_id: int, user_id: int):
+    # Rule 6: Explicitly find the note belonging to this specific user
+    stmt = select(VoiceNote).where(and_(VoiceNote.id == note_id, VoiceNote.user_id == user_id))
+    return db.execute(stmt).scalars().first()
 
-def update_voice_note(db: Session, note_id: int, file_path: str | None = None, trade_state_at_time = None):
-    note = get_voice_note(db, note_id)
+def update_voice_note(db: Session, note_id: int, user_id: int, file_path: str | None = None, trade_state_at_time: str | None = None):
+    note = get_voice_note(db, note_id, user_id)
     if not note:
         return None
     if file_path is not None:
@@ -44,8 +51,8 @@ def update_voice_note(db: Session, note_id: int, file_path: str | None = None, t
         logger.error(f"Failed to update VoiceNote {note_id}: {e}")
         return None
 
-def delete_voice_note(db: Session, note_id: int) -> bool:
-    note = get_voice_note(db, note_id)
+def delete_voice_note(db: Session, note_id: int, user_id: int) -> bool:
+    note = get_voice_note(db, note_id, user_id)
     if not note:
         return False
     try:
