@@ -20,10 +20,16 @@ class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./mister_trader.db")
     
     # Security (Rule 14: Phase 1 Authentication)
-    # We removed API_KEY because we transitioned to JWT Tokens
     SECRET_KEY: str = os.getenv("SECRET_KEY")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 Day session
+    
+    # File Storage (Rule 2: Durable Storage - Phase 2)
+    # Rule 11: Decoupling physical paths from business logic
+    MEDIA_ROOT: str = "media"
+    IMAGE_DIR: str = os.path.join(MEDIA_ROOT, "images")
+    VOICE_DIR: str = os.path.join(MEDIA_ROOT, "voice")
+    DOC_DIR: str = os.path.join(MEDIA_ROOT, "documents")
     
     # Integrations (Rule 11: Separate business logic from integrations)
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN")
