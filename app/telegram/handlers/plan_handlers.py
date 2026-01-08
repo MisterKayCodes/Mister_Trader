@@ -58,6 +58,12 @@ def get_plan_detail_keyboard(plan_id):
     return builder.as_markup()
 
 
+@router.message(F.text == "📅 Plans")
+async def menu_plan(message: Message, state: FSMContext):
+    """Handler for main menu Plans button."""
+    await cmd_plan(message, state)
+
+
 @router.message(Command("plan"))
 async def cmd_plan(message: Message, state: FSMContext):
     user_id = await get_user_id_from_state(state)

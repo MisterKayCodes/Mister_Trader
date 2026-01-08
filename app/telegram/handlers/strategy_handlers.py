@@ -54,6 +54,12 @@ def get_strategy_detail_keyboard(strategy_id):
     return builder.as_markup()
 
 
+@router.message(F.text == "📋 Strategies")
+async def menu_strategy(message: Message, state: FSMContext):
+    """Handler for main menu Strategies button."""
+    await cmd_strategy(message, state)
+
+
 @router.message(Command("strategy"))
 async def cmd_strategy(message: Message, state: FSMContext):
     user_id = await get_user_id_from_state(state)

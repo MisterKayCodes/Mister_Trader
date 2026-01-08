@@ -33,6 +33,12 @@ def get_stats_keyboard():
     return builder.as_markup()
 
 
+@router.message(F.text == "📈 Stats")
+async def menu_stats(message: Message, state):
+    """Handler for main menu Stats button."""
+    await cmd_stats(message, state)
+
+
 @router.message(Command("stats"))
 async def cmd_stats(message: Message, state):
     user_id = await get_user_id_from_state(state)

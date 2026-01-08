@@ -73,3 +73,53 @@ def get_activity_log():
         [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_stats_navigation():
+    """Inline keyboard for navigating between stats views."""
+    buttons = [
+        [
+            InlineKeyboardButton(text="📊 Overview", callback_data="stats:overview"),
+            InlineKeyboardButton(text="🌍 Sessions", callback_data="stats:sessions")
+        ],
+        [
+            InlineKeyboardButton(text="📋 Strategies", callback_data="stats:strategies"),
+            InlineKeyboardButton(text="🔥 Streaks", callback_data="stats:streak")
+        ],
+        [
+            InlineKeyboardButton(text="⏰ Time Analysis", callback_data="stats:time"),
+            InlineKeyboardButton(text="🔄 Refresh", callback_data="stats:refresh")
+        ],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_strategy_options():
+    """Inline keyboard for strategy management."""
+    buttons = [
+        [InlineKeyboardButton(text="➕ Create Strategy", callback_data="strategy:new")],
+        [InlineKeyboardButton(text="👁️ View Strategies", callback_data="strategy:list")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_plan_options():
+    """Inline keyboard for trading plan management."""
+    buttons = [
+        [InlineKeyboardButton(text="➕ Create Plan", callback_data="plan:new")],
+        [InlineKeyboardButton(text="📅 Today's Plan", callback_data="plan:today")],
+        [InlineKeyboardButton(text="📋 View All Plans", callback_data="plan:list")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_export_options():
+    """Inline keyboard for export options."""
+    buttons = [
+        [InlineKeyboardButton(text="📊 Export All Trades", callback_data="export:all")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
