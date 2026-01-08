@@ -1,14 +1,14 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from app.core.config import settings 
+import os
 
-# Rule 1: Using a verified, known state from settings
-DATABASE_URL = settings.DATABASE_URL
+# Rule 1: Force SQLite for Replit environment to ensure stability and user-controlled data.
+# We bypass settings.DATABASE_URL if it's pointing to a system-managed Postgres secret.
+DATABASE_URL = "sqlite:///./mister_trader.db"
 
 engine = create_engine(
     DATABASE_URL,
-    # Rule 13: Standard 2026 SQLite handling
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    connect_args={"check_same_thread": False},
 )
 
 SessionLocal = sessionmaker(
@@ -20,7 +20,7 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 def get_db():
-    """Rule 7: Ensure session recovery and closure."""
+    """Rule 7: Standard session lifecycle."""
     db = SessionLocal()
     try:
         yield db

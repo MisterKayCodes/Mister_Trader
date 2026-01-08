@@ -13,14 +13,15 @@ class Settings:
     
     # Server & Logging
     HOST: str = os.getenv("HOST", "0.0.0.0")
-    PORT: int = int(os.getenv("PORT", 8000))
+    PORT: int = int(os.getenv("PORT", 5000))
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     
     # Database (Rule 2: Durable Storage)
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./mister_trader.db")
+    # FORCED TO SQLITE AS PER USER REQUEST
+    DATABASE_URL: str = "sqlite:///./mister_trader.db"
     
     # Security (Rule 14: Phase 1 Authentication)
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "7d3a5b2e1f4c6a8b9d0e1f2a3b4c5d6e")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 Day session
     
