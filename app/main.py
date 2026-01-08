@@ -9,7 +9,8 @@ from app.core.config import settings
 # Import the routers
 from app.api.v1 import (
     users, accounts, trade_drafts, trades, 
-    activity, trade_media, psychology, voice_note
+    activity, trade_media, psychology, voice_note,
+    analytics, strategy, trading_plan, export
 )
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -60,3 +61,7 @@ app.include_router(activity.router, prefix="/api/v1/activities")
 app.include_router(trade_media.router, prefix="/api/v1/trade-media")
 app.include_router(psychology.router, prefix="/api/v1/trade-psychology")
 app.include_router(voice_note.router, prefix="/api/v1/voice-notes")
+app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(strategy.router, prefix="/api/v1")
+app.include_router(trading_plan.router, prefix="/api/v1")
+app.include_router(export.router, prefix="/api/v1")

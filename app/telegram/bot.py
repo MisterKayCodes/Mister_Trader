@@ -14,7 +14,11 @@ from app.telegram.handlers import (
     voice_handlers,
     psychology_handlers,
     media_handlers,
-    activity_handlers
+    activity_handlers,
+    stats_handlers,
+    export_handlers,
+    strategy_handlers,
+    plan_handlers
 )
 
 load_dotenv()
@@ -40,6 +44,10 @@ def register_all_handlers(dispatcher: Dispatcher):
     dispatcher.include_router(psychology_handlers.router)
     dispatcher.include_router(media_handlers.router)
     dispatcher.include_router(activity_handlers.router)
+    dispatcher.include_router(stats_handlers.router)
+    dispatcher.include_router(export_handlers.router)
+    dispatcher.include_router(strategy_handlers.router)
+    dispatcher.include_router(plan_handlers.router)
     
     register_menu_handlers(dispatcher)
 

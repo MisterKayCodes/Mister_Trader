@@ -6,40 +6,67 @@ Mister Trader is a comprehensive trading journal and management system built wit
 ## System Architecture
 
 ### Backend Architecture (FastAPI)
-- **Primary Database**: `mister_trader.db` (SQLite).
-- **ORM**: SQLAlchemy with Alembic for migrations.
-- **Communication**: REST API for frontend and Telegram bot interaction.
-- **Critical Configuration**: 
-    - `BACKEND_API_URL` uses Replit's dev domain for stable bot-to-server communication.
-    - Database engine is hard-coded to SQLite in `app/core/database.py` to avoid accidental Postgres connection attempts from Replit system secrets.
-    - Root route `@app.get("/")` provided for health monitoring.
+- **Primary Database**: `mister_trader.db` (SQLite)
+- **ORM**: SQLAlchemy with Alembic for migrations
+- **Communication**: REST API for frontend and Telegram bot interaction
+- **Port**: 5000 (backend API)
+
+### Database Models
+| Model | Purpose |
+|-------|---------|
+| `User` | Telegram user authentication |
+| `Account` | Trading accounts/vaults |
+| `Trade` | Individual trades with outcomes, session, strategy |
+| `Strategy` | Trading strategies with entry/exit criteria |
+| `TradingPlan` | Daily trading plans |
+| `UserStats` | Aggregated statistics per user |
+| `Activity` | Daily activity logs |
+| `TradePsychology` | Psychology notes per trade |
+| `TradeMedia` | Screenshots/charts |
+| `VoiceNote` | Voice recordings |
+| `Reminder` | Notification settings |
 
 ### Telegram Bot Architecture (Aiogram)
 - **Handlers** (all follow `*_handlers.py` naming convention):
-    - `auth_handlers.py` - /start, /signup, /login commands
-    - `account_handlers.py` - Vault/Account CRUD operations
-    - `trade_handlers.py` - Trade logging, closing, modifying
-    - `voice_handlers.py` - Voice note recording and playback
-    - `psychology_handlers.py` - Trading discipline/psychology logging
-    - `media_handlers.py` - Trade screenshot/chart uploads
-    - `activity_handlers.py` - Daily activity tracking
-    - `menu_handlers.py` - Global navigation handlers
-- **States** (FSM state groups for multi-step flows):
-    - `account_states.py`, `trade_states.py`, `voice_note_states.py`
-    - `psychology_states.py`, `media_states.py`, `activity_states.py`
-- **Persistence**: Uses `SQLStorage` (`fsm_storage.db`) for session data.
-- **Authentication**: Requires `/signup` and `/login` with a numeric PIN. Session persists across bot restarts.
+    - `auth_handlers.py` - /start, /signup, /login
+    - `account_handlers.py` - Vault/Account CRUD
+    - `trade_handlers.py` - Trade logging, closing
+    - `stats_handlers.py` - /stats with inline keyboard navigation
+    - `export_handlers.py` - /export CSV download
+    - `strategy_handlers.py` - /strategy CRUD
+    - `plan_handlers.py` - /plan trading plan CRUD
+    - `voice_handlers.py` - Voice note recording
+    - `psychology_handlers.py` - Psychology logging
+    - `media_handlers.py` - Screenshot uploads
+    - `activity_handlers.py` - Daily activity
+    - `menu_handlers.py` - Navigation
+- **Persistence**: Uses `SQLStorage` (`fsm_storage.db`) for session data
 
 ### Frontend Architecture (React)
-- **Framework**: Vite + React + Tailwind CSS.
+- **Framework**: Vite + React + Tailwind CSS
+- **Port**: 5173 (dev server)
+- **Pages**: Dashboard, Trades, Strategies, Plans, Settings
+- **API Client**: `/react/src/utils/api.js`
+
+### Key Utilities
+- `app/utils/session_utils.py` - Trading session detection (London/NY/Asian/Sydney)
+- `app/utils/trade_utils.py` - Win/loss/breakeven detection
+- `app/utils/streak_utils.py` - Streak calculation
+- `app/utils/validation_utils.py` - Trade entry validation
 
 ## User Preferences
-- Preferred communication style: Simple, everyday language.
-- Database: Exclusively SQLite for development.
+- Preferred communication style: Simple, everyday language
+- Database: Exclusively SQLite for development
 
 ## Recent Changes (2026-01-08)
-- Refactored psychology, media, and activity handlers to comprehensive versions
-- All handlers now follow `*_handlers.py` naming convention
-- Added proper FSM states for all multi-step flows
-- Updated keyboards to match new callback_data patterns
-- FSM storage persists login sessions across bot restarts
+- Added Strategy model and CRUD handlers
+- Added TradingPlan model and CRUD handlers
+- Added UserStats for aggregated analytics
+- Added /stats command with inline keyboard (overview, sessions, strategies, streaks, time)
+- Added /export command for CSV download
+- Added session detection utility (London/NY/Asian/Sydney)
+- Added streak tracking utility
+- Added trade validation utility
+- Created React frontend with Vite + Tailwind CSS
+- Created comprehensive INSTRUCTIONS.md documentation
+- Updated README.md with full feature list

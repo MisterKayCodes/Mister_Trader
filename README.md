@@ -1,64 +1,96 @@
 # Mister Trader
 
-A comprehensive trading journal and management system with a FastAPI backend, React frontend, and a Telegram bot interface.
+A comprehensive trading journal and management system with FastAPI backend, React frontend, and Telegram bot interface.
 
-## 🚀 Features
+## Features
 
-- **Trading Journal:** Log, track, and manage your trades across multiple vaults (accounts).
-- **Telegram Bot:** Full-featured bot for logging trades, recording voice notes, and checking psychology stats on the go.
-- **Psychology Tracking:** Monitor your emotional state and plan adherence to improve discipline.
-- **Media Management:** Attach screenshots and voice notes to your trades for better post-trade analysis.
-- **Modern Tech Stack:** FastAPI, SQLAlchemy, Alembic, Aiogram, React (Vite + Tailwind CSS).
+- **Trade Logging** - Log trades via Telegram bot with automatic session detection
+- **Performance Analytics** - Win rate, P&L, session comparison, strategy effectiveness
+- **Session Tracking** - Automatic detection of London, NY, Asian, Sydney sessions
+- **Strategy Management** - Define and track multiple trading strategies
+- **Trading Plans** - Create daily trading plans with bias, watchlist, mental state
+- **Streak Tracking** - Current and best win/loss streaks
+- **Time Analysis** - Best performing hours and sessions
+- **CSV Export** - Export all trade data for external analysis
+- **React Dashboard** - Modern web interface for data visualization
+- **Psychology Tracking** - Monitor emotional state and plan adherence
+- **Media Management** - Attach screenshots and voice notes to trades
 
-## 🛠️ Project Structure
+## Quick Start
 
-- `app/`: FastAPI backend application.
-  - `api/v1/`: REST API endpoints.
-  - `telegram/`: Telegram bot logic and handlers.
-  - `models/`: SQLAlchemy database models.
-  - `services/`: Business logic services.
-- `react/`: Frontend application (Vite + React + Tailwind).
-- `media/`: Storage for images and voice notes.
-- `mister_trader.db`: Main SQLite database.
+### Prerequisites
+- Python 3.11+
+- Node.js 20+
+- Telegram Bot Token
 
-## ⚙️ Setup & Installation
+### 1. Set Environment Variables
+```bash
+export TELEGRAM_BOT_TOKEN="your_token_here"
+```
 
-1. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   cd react && npm install
-   ```
+### 2. Start Backend
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 5000
+```
 
-2. **Environment Variables:**
-   Create a `.env` file in the root directory:
-   ```env
-   TELEGRAM_BOT_TOKEN=your_bot_token
-   DATABASE_URL=sqlite:///./mister_trader.db
-   SECRET_KEY=your_secret_key
-   BACKEND_API_URL=http://0.0.0.0:8000
-   ```
+### 3. Start Telegram Bot
+```bash
+python -m app.telegram.bot
+```
 
-3. **Run the Backend:**
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 8000
-   ```
+### 4. Start React Frontend (Optional)
+```bash
+cd react
+npm install
+npm run dev
+```
 
-4. **Run the Telegram Bot:**
-   ```bash
-   python -m app.telegram.bot
-   ```
+## Telegram Commands
 
-5. **Run the Frontend:**
-   ```bash
-   cd react && npm run dev
-   ```
+| Command | Description |
+|---------|-------------|
+| `/start` | Welcome message |
+| `/signup` | Create account with PIN |
+| `/login` | Authenticate session |
+| `/stats` | View trading statistics |
+| `/export` | Download trades as CSV |
+| `/strategy` | Manage trading strategies |
+| `/plan` | Create/view trading plans |
 
-## 🤖 Telegram Bot Commands
+## Tech Stack
 
-- `/start` - Initialize the bot and see the main menu.
-- `/signup` - Register a new account.
-- `/login` - Log in to your existing account.
+- **Backend**: FastAPI, SQLAlchemy, SQLite
+- **Bot**: Aiogram 3.x with FSM
+- **Frontend**: React, Vite, Tailwind CSS
+- **Database**: SQLite (mister_trader.db)
 
-## 📝 License
+## Project Structure
 
-MIT License
+```
+├── app/
+│   ├── api/v1/          # REST endpoints
+│   ├── core/            # Config, database
+│   ├── models/          # SQLAlchemy models
+│   ├── services/        # Business logic
+│   ├── telegram/        # Bot handlers
+│   └── utils/           # Utilities
+├── react/               # React frontend
+├── alembic/             # Migrations
+└── media/               # Uploads
+```
+
+## API Documentation
+
+Visit `/docs` when the backend is running for interactive API documentation.
+
+## Documentation
+
+See [INSTRUCTIONS.md](./INSTRUCTIONS.md) for detailed project documentation including:
+- Complete architecture overview
+- Handler and service documentation
+- Debugging guide
+- Deployment instructions
+
+## License
+
+MIT
