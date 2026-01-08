@@ -43,6 +43,10 @@ async def startup_event():
 # This makes the 'media' folder accessible via URL (e.g., /media/images/photo.jpg)
 app.mount("/media", StaticFiles(directory=settings.MEDIA_ROOT), name="media")
 
+@app.get("/")
+async def root():
+    return {"message": "MisterTrader API is running", "docs": "/docs"}
+
 @app.get("/health")
 async def health_check():
     return JSONResponse(content={"status": "ok"})
