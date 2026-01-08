@@ -60,7 +60,8 @@ async def handle_view_trades(callback: types.CallbackQuery, state: FSMContext):
             msg += f"• <code>ID {t['id']}</code>: {t['symbol']} {t['side']} @ {t['entry_price']} ({t['state']})\n"
         
         await callback.message.answer(msg, parse_mode="HTML")
-    except Exception:
+    except Exception as e:
+        logger.error(f"View trades error: {e}")
         await callback.answer("❌ Failed to fetch trades.", show_alert=True)
     await callback.answer()
 
@@ -121,11 +122,13 @@ async def process_entry_price(message: Message, state: FSMContext):
         price = float(message.text.strip())
         data = await state.get_data() or {}
         
+        # Rule 1: Use UPPERCASE 'OPEN' to match backend TradeState Enum
         payload = {
             "symbol": str(data["symbol"]),
             "side": str(data["side"]),
             "quantity": float(data["quantity"]),
             "entry_price": price,
+            "state": "OPEN",
             "account_id": int(data["active_account_id"])
         }
         
@@ -160,7 +163,8 @@ async def list_trades_for_closing(callback: types.CallbackQuery, state: FSMConte
          
     try:
         trades = await _fetch_user_trades(user_data["access_token"], user_data["active_account_id"])
-        open_trades = [t for t in trades if t['state'] != 'closed']
+        # Rule 1: Only close trades that are NOT already 'CLOSED' (Uppercase)
+        open_trades = [t for t in trades if t['state'] != 'CLOSED']
         if not open_trades: return await callback.message.answer("No open trades found.")
             
         btns = [[InlineKeyboardButton(text=f"❌ {t['symbol']} @ {t['entry_price']}", 
@@ -168,7 +172,8 @@ async def list_trades_for_closing(callback: types.CallbackQuery, state: FSMConte
         
         await callback.message.edit_text("<b>Select trade to close:</b>", 
             reply_markup=InlineKeyboardMarkup(inline_keyboard=btns), parse_mode="HTML")
-    except Exception:
+    except Exception as e:
+        logger.error(f"Close list error: {e}")
         await callback.answer("❌ Error fetching trades.")
     await callback.answer()
 
@@ -176,7 +181,7 @@ async def list_trades_for_closing(callback: types.CallbackQuery, state: FSMConte
 async def start_close_trade_price(callback: types.CallbackQuery, state: FSMContext):
     trade_id = callback.data.split("_")[2]
     await state.update_data(closing_trade_id=trade_id)
-    await callback.message.answer(f"Closing Trade ID {trade_id}.\nEnter exit price:", reply_markup=get_cancel_action(), parse_mode="HTML")
+    await callback.message.answer(f"Closing Trade ID <code>{trade_id}</code>.\nEnter exit price:", reply_markup=get_cancel_action(), parse_mode="HTML")
     await state.set_state(TradeStates.waiting_for_exit_price)
     await callback.answer()
 
@@ -186,15 +191,19 @@ async def process_exit_price(message: Message, state: FSMContext):
         exit_p = float(message.text.strip())
         data = await state.get_data() or {}
         trade_id = data.get("closing_trade_id")
+        
+        # Rule 1: Use UPPERCASE 'CLOSED' to match backend TradeState Enum
         async with httpx.AsyncClient() as client:
             resp = await client.put(
                 f"{BOT_BACKEND_URL}/api/v1/trades/{trade_id}",
-                json={"exit_price": exit_p, "state": "closed"},
+                json={"exit_price": exit_p, "state": "CLOSED"},
                 headers={"Authorization": f"Bearer {data.get('access_token')}"}
             )
             if resp.status_code == 200:
                 await state.set_state(None)
-                await message.answer("✅ Trade closed!", reply_markup=get_main_menu())
+                await message.answer("✅ Trade closed successfully!", reply_markup=get_main_menu())
+            else:
+                await message.answer("❌ Error closing trade.")
     except ValueError:
         await message.answer("❌ Enter a numeric price:")
 
@@ -207,14 +216,17 @@ async def list_trades_for_modification(callback: types.CallbackQuery, state: FSM
          
     try:
         trades = await _fetch_user_trades(user_data["access_token"], user_data["active_account_id"])
-        open_trades = [t for t in trades if t['state'] != 'closed']
-        if not open_trades: return await callback.message.answer("No open trades found.")
+        # Rule 1: Only modify trades that are NOT 'CLOSED' (Uppercase)
+        open_trades = [t for t in trades if t['state'] != 'CLOSED']
+        if not open_trades: return await callback.message.answer("No open trades found to modify.")
             
         btns = [[InlineKeyboardButton(text=f"📝 {t['symbol']} @ {t['entry_price']}", 
                 callback_data=f"mod_trd_{t['id']}")] for t in open_trades]
         await callback.message.edit_text("<b>Select trade to modify:</b>", 
             reply_markup=InlineKeyboardMarkup(inline_keyboard=btns), parse_mode="HTML")
-    except Exception: await callback.answer("❌ Error.")
+    except Exception as e:
+        logger.error(f"Modify list error: {e}")
+        await callback.answer("❌ Error.")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("mod_trd_"))
@@ -262,7 +274,9 @@ async def list_trades_for_deletion(callback: types.CallbackQuery, state: FSMCont
                 callback_data=f"del_trd_{t['id']}")] for t in trades]
         await callback.message.edit_text("<b>Select trade to delete:</b>", 
             reply_markup=InlineKeyboardMarkup(inline_keyboard=btns), parse_mode="HTML")
-    except Exception: await callback.answer("❌ Error.")
+    except Exception as e:
+        logger.error(f"Delete list error: {e}")
+        await callback.answer("❌ Error.")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("del_trd_"))

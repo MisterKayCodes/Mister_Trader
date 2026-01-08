@@ -15,7 +15,6 @@ async def cmd_start(message: Message, state: FSMContext):
     Rule 6: Check for existing session. Redirect to menu if token exists.
     Using HTML mode for cleaner 2026 formatting.
     """
-    # Fix: Persistent storage can return None for empty states. Fallback to empty dict.
     user_data = await state.get_data() or {}
     auth_token = user_data.get("access_token")
 
@@ -82,9 +81,7 @@ async def cmd_login(message: Message, state: FSMContext):
                 token_data = login_resp.json()
                 access_token = token_data.get("access_token")
 
-                # Rule 1: Save state (aiogram handles internal dict creation if None)
-                await state.update_data(access_token=access_token)
-
+                # Step 1: Fetch accounts to identify the active one
                 acc_resp = await client.get(
                     f"{BOT_BACKEND_URL}/api/v1/accounts",
                     headers={"Authorization": f"Bearer {access_token}"},
@@ -95,6 +92,8 @@ async def cmd_login(message: Message, state: FSMContext):
                     accounts = acc_resp.json()
                     
                     if not accounts:
+                        # Save only token, wait for user to create account name
+                        await state.update_data(access_token=access_token)
                         await message.answer(
                             "✅ <b>Login successful!</b>\n\n"
                             "You don't have a vault yet. Please enter a <b>Name</b> for your first account (e.g. Personal):",
@@ -102,7 +101,17 @@ async def cmd_login(message: Message, state: FSMContext):
                         )
                         await state.set_state(AccountStates.waiting_for_name)
                     else:
-                        active_name = accounts[0]['name'] if isinstance(accounts, list) else accounts.get('name')
+                        # FIX: Extract the first account and save its ID to state
+                        # This prevents 'account_id=None' errors in Voice Handlers
+                        first_account = accounts[0] if isinstance(accounts, list) else accounts
+                        active_name = first_account.get('name')
+                        active_id = first_account.get('id')
+
+                        await state.update_data(
+                            access_token=access_token,
+                            active_account_id=active_id
+                        )
+
                         await message.answer(
                             f"✅ <b>Login successful!</b>\n\n"
                             f"<b>Active Vault:</b> <code>{active_name}</code>",
@@ -110,6 +119,7 @@ async def cmd_login(message: Message, state: FSMContext):
                             parse_mode="HTML"
                         )
                 else:
+                    await state.update_data(access_token=access_token)
                     await message.answer("✅ <b>Login successful!</b>\nEnter a name for your first vault:", parse_mode="HTML")
                     await state.set_state(AccountStates.waiting_for_name)
             

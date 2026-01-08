@@ -41,6 +41,17 @@ def get_modify_field_options():
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+
+def get_voice_note_options():
+    """Rule 13: Centralized Voice Note options."""
+    buttons = [
+        [InlineKeyboardButton(text="🎙️ Record/Upload Note", callback_data="voice_record")],
+        [InlineKeyboardButton(text="🎧 Listen to Notes", callback_data="voice_view_list")],
+        [InlineKeyboardButton(text="🗑️ Delete a Note", callback_data="voice_delete_list")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 def get_psychology_tools():
     """Maps to /api/v1/psychology logic."""
     buttons = [
