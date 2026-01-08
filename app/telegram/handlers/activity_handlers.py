@@ -43,6 +43,8 @@ async def start_activity_log(callback: CallbackQuery, state: FSMContext):
     if not _check_session(user_data):
         return await callback.answer("❌ Session missing.", show_alert=True)
     
+    await state.update_data(activity_auth=user_data.get("access_token"))
+    
     btns = [
         [InlineKeyboardButton(text=f"{emoji} {label}", callback_data=f"atype_{code}")]
         for emoji, code, label in ACTIVITY_TYPES
@@ -83,7 +85,7 @@ async def process_activity_type(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(ActivityStates.waiting_for_date, F.data == "adate_today")
 async def process_today_date(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data() or {}
-    auth = data.get("access_token")
+    auth = data.get("activity_auth") or data.get("access_token")
     activity_type = data.get("activity_type")
     today = date.today().isoformat()
     
@@ -113,12 +115,15 @@ async def process_custom_date(message: Message, state: FSMContext):
         )
     
     data = await state.get_data() or {}
-    auth = data.get("access_token")
+    auth = data.get("activity_auth") or data.get("access_token")
     activity_type = data.get("activity_type")
     
     await _submit_activity(message, state, auth, activity_type, parsed_date.isoformat())
 
 async def _submit_activity(message: Message, state: FSMContext, auth: str, activity_type: str, activity_date: str):
+    if not auth:
+        return await message.answer("❌ Session expired. Please /login again.")
+    
     payload = {
         "activity_type": activity_type,
         "date": activity_date
@@ -198,15 +203,68 @@ async def prompt_date_filter(callback: CallbackQuery, state: FSMContext):
     if not _check_session(user_data):
         return await callback.answer("❌ Session missing.", show_alert=True)
     
+    await state.update_data(filter_auth=user_data.get("access_token"))
+    
     await callback.message.answer(
         "📅 <b>Filter by Date</b>\n\n"
         "Enter date (YYYY-MM-DD):",
         reply_markup=get_cancel_action(),
         parse_mode="HTML"
     )
-    await state.set_state(ActivityStates.waiting_for_date)
-    await state.update_data(activity_filter_mode=True)
+    await state.set_state(ActivityStates.waiting_for_filter_date)
     await callback.answer()
+
+@router.message(ActivityStates.waiting_for_filter_date)
+async def process_filter_date(message: Message, state: FSMContext):
+    text = message.text.strip()
+    
+    try:
+        parsed_date = datetime.strptime(text, "%Y-%m-%d").date()
+    except ValueError:
+        return await message.answer(
+            "❌ Invalid date format. Use YYYY-MM-DD (e.g., 2026-01-08)",
+            parse_mode="HTML"
+        )
+    
+    data = await state.get_data() or {}
+    auth = data.get("filter_auth") or data.get("access_token")
+    
+    if not auth:
+        return await message.answer("❌ Session expired. Please /login again.")
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{BOT_BACKEND_URL}/api/v1/activities?activity_date={parsed_date.isoformat()}",
+                headers={"Authorization": f"Bearer {auth}"},
+                timeout=10.0
+            )
+            
+            await state.set_state(None)
+            
+            if resp.status_code == 200:
+                activities = resp.json()
+                if not activities:
+                    return await message.answer(
+                        f"📅 <b>Activities for {parsed_date.isoformat()}</b>\n\n"
+                        "No activities found for this date.",
+                        reply_markup=get_main_menu(),
+                        parse_mode="HTML"
+                    )
+                
+                msg = f"📅 <b>Activities for {parsed_date.isoformat()}</b>\n\n"
+                for act in activities:
+                    act_type = act.get("activity_type", "Unknown")
+                    emoji = next((e for e, c, l in ACTIVITY_TYPES if c == act_type), "📌")
+                    label = next((l for e, c, l in ACTIVITY_TYPES if c == act_type), act_type)
+                    msg += f"{emoji} {label}\n"
+                
+                await message.answer(msg, reply_markup=get_main_menu(), parse_mode="HTML")
+            else:
+                await message.answer("❌ Failed to fetch activities.", reply_markup=get_main_menu())
+        except Exception as e:
+            logger.error(f"Filter activity error: {e}")
+            await message.answer("❌ Connection failure.", reply_markup=get_main_menu())
 
 @router.callback_query(F.data == "activity_view")
 async def legacy_activity_view(callback: CallbackQuery, state: FSMContext):
@@ -259,7 +317,11 @@ async def list_activities_for_deletion(callback: CallbackQuery, state: FSMContex
 @router.callback_query(F.data.startswith("del_act_"))
 async def process_activity_deletion(callback: CallbackQuery, state: FSMContext):
     activity_id = callback.data.split("_")[2]
-    auth = (await state.get_data() or {}).get("access_token")
+    user_data = await state.get_data() or {}
+    auth = user_data.get("access_token")
+    
+    if not auth:
+        return await callback.answer("❌ Session expired.", show_alert=True)
     
     async with httpx.AsyncClient() as client:
         try:

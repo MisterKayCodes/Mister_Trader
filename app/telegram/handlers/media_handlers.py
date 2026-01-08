@@ -1,4 +1,5 @@
 import os
+import io
 import httpx
 import logging
 from aiogram import Router, F, types, Bot
@@ -52,8 +53,11 @@ async def start_media_upload(callback: CallbackQuery, state: FSMContext):
     if not _check_session(user_data):
         return await callback.answer("❌ Session missing or no active vault.", show_alert=True)
     
+    auth = user_data["access_token"]
+    acc_id = user_data["active_account_id"]
+    
     try:
-        trades = await _fetch_trades(user_data["access_token"], user_data["active_account_id"])
+        trades = await _fetch_trades(auth, acc_id)
         if not trades:
             return await callback.message.answer("No trades found. Log a trade first before uploading media.")
         
@@ -80,7 +84,11 @@ async def start_media_upload(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(MediaStates.waiting_for_trade_selection, F.data.startswith("media_target_"))
 async def process_media_trade_selection(callback: CallbackQuery, state: FSMContext):
     trade_id = callback.data.split("_")[2]
-    await state.update_data(media_trade_id=trade_id)
+    user_data = await state.get_data() or {}
+    await state.update_data(
+        media_trade_id=trade_id,
+        media_auth=user_data.get("access_token")
+    )
     
     btns = [
         [InlineKeyboardButton(text="📸 Screenshot", callback_data="mtype_screenshot")],
@@ -118,20 +126,26 @@ async def process_media_type(callback: CallbackQuery, state: FSMContext):
 @router.message(MediaStates.waiting_for_file, F.photo)
 async def handle_media_upload(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data() or {}
-    auth = data.get("access_token")
+    auth = data.get("media_auth") or data.get("access_token")
     trade_id = data.get("media_trade_id")
     media_type = data.get("media_type", "screenshot")
     
+    if not auth:
+        return await message.answer("❌ Session expired. Please /login again.")
+    
     photo = message.photo[-1]
     file_info = await bot.get_file(photo.file_id)
-    file_content = await bot.download_file(file_info.file_path)
+    
+    file_stream = await bot.download_file(file_info.file_path)
+    file_bytes = io.BytesIO(file_stream.read())
+    file_bytes.seek(0)
     
     async with httpx.AsyncClient() as client:
         form_data = {
             "trade_id": str(trade_id),
             "media_type": media_type
         }
-        files = {'file': (f"trade_{trade_id}_{media_type}.jpg", file_content, 'image/jpeg')}
+        files = {'file': (f"trade_{trade_id}_{media_type}.jpg", file_bytes, 'image/jpeg')}
         
         try:
             resp = await client.post(
@@ -162,16 +176,21 @@ async def handle_media_upload(message: Message, state: FSMContext, bot: Bot):
 @router.message(MediaStates.waiting_for_file, F.document)
 async def handle_document_upload(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data() or {}
-    auth = data.get("access_token")
+    auth = data.get("media_auth") or data.get("access_token")
     trade_id = data.get("media_trade_id")
     media_type = data.get("media_type", "document")
+    
+    if not auth:
+        return await message.answer("❌ Session expired. Please /login again.")
     
     doc = message.document
     if not doc.mime_type or not doc.mime_type.startswith("image/"):
         return await message.answer("❌ Please send an image file only.")
     
     file_info = await bot.get_file(doc.file_id)
-    file_content = await bot.download_file(file_info.file_path)
+    file_stream = await bot.download_file(file_info.file_path)
+    file_bytes = io.BytesIO(file_stream.read())
+    file_bytes.seek(0)
     
     async with httpx.AsyncClient() as client:
         form_data = {
@@ -179,7 +198,7 @@ async def handle_document_upload(message: Message, state: FSMContext, bot: Bot):
             "media_type": media_type
         }
         ext = doc.file_name.split(".")[-1] if doc.file_name else "jpg"
-        files = {'file': (f"trade_{trade_id}_{media_type}.{ext}", file_content, doc.mime_type)}
+        files = {'file': (f"trade_{trade_id}_{media_type}.{ext}", file_bytes, doc.mime_type)}
         
         try:
             resp = await client.post(
@@ -209,8 +228,11 @@ async def list_trades_for_media_view(callback: CallbackQuery, state: FSMContext)
     if not _check_session(user_data):
         return await callback.answer("❌ Session missing.", show_alert=True)
     
+    auth = user_data["access_token"]
+    acc_id = user_data["active_account_id"]
+    
     try:
-        trades = await _fetch_trades(user_data["access_token"], user_data["active_account_id"])
+        trades = await _fetch_trades(auth, acc_id)
         if not trades:
             return await callback.message.answer("No trades found.")
         
@@ -236,7 +258,11 @@ async def list_trades_for_media_view(callback: CallbackQuery, state: FSMContext)
 @router.callback_query(F.data.startswith("view_media_"))
 async def show_trade_media(callback: CallbackQuery, state: FSMContext, bot: Bot):
     trade_id = callback.data.split("_")[2]
-    auth = (await state.get_data() or {}).get("access_token")
+    user_data = await state.get_data() or {}
+    auth = user_data.get("access_token")
+    
+    if not auth:
+        return await callback.answer("❌ Session expired.", show_alert=True)
     
     async with httpx.AsyncClient() as client:
         try:

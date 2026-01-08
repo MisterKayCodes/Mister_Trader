@@ -52,8 +52,11 @@ async def start_psychology_session(callback: CallbackQuery, state: FSMContext):
     if not _check_session(user_data):
         return await callback.answer("❌ Session missing or no active vault.", show_alert=True)
     
+    auth = user_data["access_token"]
+    acc_id = user_data["active_account_id"]
+    
     try:
-        trades = await _fetch_trades(user_data["access_token"], user_data["active_account_id"])
+        trades = await _fetch_trades(auth, acc_id)
         if not trades:
             return await callback.message.answer("No trades found. Log a trade first before adding psychology notes.")
         
@@ -80,7 +83,11 @@ async def start_psychology_session(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(PsychologyStates.waiting_for_trade_selection, F.data.startswith("psych_trade_"))
 async def process_trade_selection(callback: CallbackQuery, state: FSMContext):
     trade_id = callback.data.split("_")[2]
-    await state.update_data(psych_trade_id=trade_id)
+    user_data = await state.get_data() or {}
+    await state.update_data(
+        psych_trade_id=trade_id,
+        psych_auth=user_data.get("access_token")
+    )
     
     btns = [
         [
@@ -168,7 +175,10 @@ async def process_plan_check(callback: CallbackQuery, state: FSMContext):
 async def process_notes_and_submit(message: Message, state: FSMContext):
     notes = message.text.strip() if message.text.lower() != "skip" else ""
     data = await state.get_data() or {}
-    auth = data.get("access_token")
+    auth = data.get("psych_auth") or data.get("access_token")
+    
+    if not auth:
+        return await message.answer("❌ Session expired. Please /login again.")
     
     payload = {
         "trade_id": int(data["psych_trade_id"]),
@@ -303,7 +313,11 @@ async def view_psychology_entries(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("view_psych_"))
 async def show_trade_psychology(callback: CallbackQuery, state: FSMContext):
     trade_id = callback.data.split("_")[2]
-    auth = (await state.get_data() or {}).get("access_token")
+    user_data = await state.get_data() or {}
+    auth = user_data.get("access_token")
+    
+    if not auth:
+        return await callback.answer("❌ Session expired.", show_alert=True)
     
     async with httpx.AsyncClient() as client:
         resp = await client.get(
