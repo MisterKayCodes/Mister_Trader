@@ -10,3 +10,15 @@ passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 python-multipart==0.0.7
 aiogram-sqlite-storage>=0.2.1
+aiogram
+aiogram-sqlite-storage
+alembic
+bcrypt
+fastapi
+httpx
+passlib[bcrypt]
+python-dotenv
+python-jose[cryptography]
+python-multipart
+sqlalchemy
+uvicorn[standard]

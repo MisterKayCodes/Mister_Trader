@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Rule 11: Import handlers
 from app.telegram.handlers.auth_handlers import cmd_start, cmd_signup, cmd_login
 from app.telegram.handlers.menu_handlers import register_menu_handlers
-from app.telegram.handlers import account_handlers, trade_handlers, voice_handlers
+from app.telegram.handlers import account_handlers, trade_handlers, voice_handlers, psychology, media, activity
 
 load_dotenv()
 
@@ -42,7 +42,12 @@ def register_all_handlers(dispatcher: Dispatcher):
     # 4. Voice Note Handlers (FSM Router)
     dispatcher.include_router(voice_handlers.router)
     
-    # 5. Menu Handlers
+    # 5. New Handlers
+    dispatcher.include_router(psychology.router)
+    dispatcher.include_router(media.router)
+    dispatcher.include_router(activity.router)
+    
+    # 6. Menu Handlers
     register_menu_handlers(dispatcher)
 
 async def main():

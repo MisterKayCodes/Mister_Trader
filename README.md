@@ -1,49 +1,64 @@
+# Mister Trader
 
-# MisterTrader
+A comprehensive trading journal and management system with a FastAPI backend, React frontend, and a Telegram bot interface.
 
-**MisterTrader** is a trading journal backend with Telegram bot and React frontend.
+## 🚀 Features
 
-## Setup
+- **Trading Journal:** Log, track, and manage your trades across multiple vaults (accounts).
+- **Telegram Bot:** Full-featured bot for logging trades, recording voice notes, and checking psychology stats on the go.
+- **Psychology Tracking:** Monitor your emotional state and plan adherence to improve discipline.
+- **Media Management:** Attach screenshots and voice notes to your trades for better post-trade analysis.
+- **Modern Tech Stack:** FastAPI, SQLAlchemy, Alembic, Aiogram, React (Vite + Tailwind CSS).
 
-1. Create a Python virtual environment:
+## 🛠️ Project Structure
 
-```bash
-python3 -m venv env
-source env/bin/activate  # On Windows: env\Scripts\activate
-````
+- `app/`: FastAPI backend application.
+  - `api/v1/`: REST API endpoints.
+  - `telegram/`: Telegram bot logic and handlers.
+  - `models/`: SQLAlchemy database models.
+  - `services/`: Business logic services.
+- `react/`: Frontend application (Vite + React + Tailwind).
+- `media/`: Storage for images and voice notes.
+- `mister_trader.db`: Main SQLite database.
 
-2. Install dependencies:
+## ⚙️ Setup & Installation
 
-```bash
-pip install fastapi uvicorn
-```
+1. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   cd react && npm install
+   ```
 
-3. Run the server:
+2. **Environment Variables:**
+   Create a `.env` file in the root directory:
+   ```env
+   TELEGRAM_BOT_TOKEN=your_bot_token
+   DATABASE_URL=sqlite:///./mister_trader.db
+   SECRET_KEY=your_secret_key
+   BACKEND_API_URL=http://0.0.0.0:8000
+   ```
 
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+3. **Run the Backend:**
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
 
-4. Visit `http://localhost:8000/health` to check health.
+4. **Run the Telegram Bot:**
+   ```bash
+   python -m app.telegram.bot
+   ```
 
-## Environment Variables
+5. **Run the Frontend:**
+   ```bash
+   cd react && npm run dev
+   ```
 
-Copy `.env.example` to `.env` and fill in your Telegram Bot token and other configs.
+## 🤖 Telegram Bot Commands
 
-```
+- `/start` - Initialize the bot and see the main menu.
+- `/signup` - Register a new account.
+- `/login` - Log in to your existing account.
 
----
+## 📝 License
 
-
-
-```
-
-mister_trader/
-├── .gitignore
-├── .env.example
-└── README.md
-
-```
-
----
-
+MIT License
