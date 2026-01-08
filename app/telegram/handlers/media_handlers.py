@@ -308,3 +308,121 @@ async def show_trade_media(callback: CallbackQuery, state: FSMContext, bot: Bot)
 @router.callback_query(F.data == "media_view")
 async def legacy_media_view(callback: CallbackQuery, state: FSMContext):
     await list_trades_for_media_view(callback, state)
+
+@router.callback_query(F.data == "media_delete")
+async def list_trades_for_media_delete(callback: CallbackQuery, state: FSMContext):
+    user_data = await state.get_data() or {}
+    if not _check_session(user_data):
+        return await callback.answer("❌ Session missing.", show_alert=True)
+    
+    auth = user_data["access_token"]
+    acc_id = user_data["active_account_id"]
+    
+    try:
+        trades = await _fetch_trades(auth, acc_id)
+        if not trades:
+            return await callback.message.answer("No trades found.")
+        
+        btns = [
+            [InlineKeyboardButton(
+                text=f"🗑️ {_get_trade_label(t)}",
+                callback_data=f"del_media_trade_{t['id']}"
+            )]
+            for t in trades if isinstance(t, dict)
+        ]
+        btns.append([InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")])
+        
+        await callback.message.edit_text(
+            "<b>Select a trade to delete media from:</b>",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=btns),
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.error(f"Delete media trades error: {e}")
+        await callback.answer("❌ Error.", show_alert=True)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("del_media_trade_"))
+async def list_media_for_deletion(callback: CallbackQuery, state: FSMContext):
+    trade_id = callback.data.split("_")[3]
+    user_data = await state.get_data() or {}
+    auth = user_data.get("access_token")
+    
+    if not auth:
+        return await callback.answer("❌ Session expired.", show_alert=True)
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{BOT_BACKEND_URL}/api/v1/trade-media/trade/{trade_id}",
+                headers={"Authorization": f"Bearer {auth}"},
+                timeout=10.0
+            )
+            
+            if resp.status_code == 200:
+                media_list = resp.json()
+                if not media_list:
+                    return await callback.message.answer(f"No media found for Trade {trade_id}.")
+                
+                await state.update_data(delete_media_auth=auth)
+                
+                btns = [
+                    [InlineKeyboardButton(
+                        text=f"🗑️ {item.get('media_type', 'image')} | ID:{item['id']}",
+                        callback_data=f"confirm_del_media_{item['id']}"
+                    )]
+                    for item in media_list
+                ]
+                btns.append([InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")])
+                
+                await callback.message.edit_text(
+                    f"<b>⚠️ Select media to delete from Trade {trade_id}:</b>",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=btns),
+                    parse_mode="HTML"
+                )
+            else:
+                await callback.message.answer(f"No media found for Trade {trade_id}.")
+        except Exception as e:
+            logger.error(f"List media for delete error: {e}")
+            await callback.answer("❌ Error.", show_alert=True)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("confirm_del_media_"))
+async def confirm_delete_media(callback: CallbackQuery, state: FSMContext):
+    media_id = callback.data.split("_")[3]
+    user_data = await state.get_data() or {}
+    auth = user_data.get("delete_media_auth") or user_data.get("access_token")
+    
+    if not auth:
+        await state.set_state(None)
+        return await callback.answer("❌ Session expired.", show_alert=True)
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.delete(
+                f"{BOT_BACKEND_URL}/api/v1/trade-media/{media_id}",
+                headers={"Authorization": f"Bearer {auth}"},
+                timeout=10.0
+            )
+            
+            if resp.status_code == 204:
+                await state.set_state(None)
+                await callback.message.answer(
+                    f"✅ <b>Media #{media_id} deleted.</b>",
+                    reply_markup=get_main_menu(),
+                    parse_mode="HTML"
+                )
+            else:
+                await state.set_state(None)
+                await callback.message.answer(
+                    "❌ Failed to delete media. Please try again from the menu.",
+                    reply_markup=get_main_menu()
+                )
+        except Exception as e:
+            logger.error(f"Delete media error: {e}")
+            await state.set_state(None)
+            await callback.message.answer(
+                "❌ Connection error. Please try again.",
+                reply_markup=get_main_menu()
+            )
+    await callback.answer()

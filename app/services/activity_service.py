@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from app.models.activity import Activity
 
 def log_activity(db: Session, user_id: int, activity_date: date, activity_type: str) -> Activity:
-    # Rule 5: Idempotency (Existing code is mostly good, but use db.scalar)
     stmt = select(Activity).where(
         and_(Activity.user_id == user_id, Activity.date == activity_date, Activity.activity_type == activity_type)
     )
@@ -12,7 +11,6 @@ def log_activity(db: Session, user_id: int, activity_date: date, activity_type: 
     if existing:
         return existing
 
-    # Limit check
     count_stmt = select(func.count(Activity.id)).where(Activity.user_id == user_id, Activity.date == activity_date)
     count = db.scalar(count_stmt) or 0
     if count >= 10:
@@ -36,3 +34,15 @@ def delete_activity_secure(db: Session, activity_id: int, user_id: int) -> bool:
     db.delete(activity)
     db.commit()
     return True
+
+def list_activities(db: Session, user_id: int, activity_date: date = None):
+    """Rule 14: Return only activities belonging to the user."""
+    if activity_date:
+        stmt = select(Activity).where(
+            and_(Activity.user_id == user_id, Activity.date == activity_date)
+        ).order_by(desc(Activity.date))
+    else:
+        stmt = select(Activity).where(
+            Activity.user_id == user_id
+        ).order_by(desc(Activity.date)).limit(50)
+    return db.scalars(stmt).all()

@@ -59,6 +59,7 @@ def get_media_options():
     buttons = [
         [InlineKeyboardButton(text="📤 Upload Media", callback_data="media_upload")],
         [InlineKeyboardButton(text="📥 View Media", callback_data="media_download")],
+        [InlineKeyboardButton(text="🗑️ Delete Media", callback_data="media_delete")],
         [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

@@ -13,6 +13,15 @@ logger = logging.getLogger(__name__)
 router = Router()
 BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000").rstrip("/")
 
+def _int_to_level(val: int) -> str:
+    """Convert 1-5 rating to LOW/MEDIUM/HIGH enum."""
+    if val <= 2:
+        return "LOW"
+    elif val == 3:
+        return "MEDIUM"
+    else:
+        return "HIGH"
+
 def _check_session(user_data: dict) -> bool:
     return bool(user_data.get("access_token") and user_data.get("active_account_id"))
 
@@ -182,8 +191,8 @@ async def process_notes_and_submit(message: Message, state: FSMContext):
     
     payload = {
         "trade_id": int(data["psych_trade_id"]),
-        "discipline": data["psych_discipline"],
-        "confidence": data["psych_confidence"],
+        "discipline": _int_to_level(data["psych_discipline"]),
+        "confidence": _int_to_level(data["psych_confidence"]),
         "followed_plan": data["psych_followed_plan"],
         "notes": notes
     }
