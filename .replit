@@ -48,3 +48,8 @@ outputType = "console"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+BACKEND_API_URL = "https://3ee71170-2847-41d6-8301-30167b2572a7-00-1i1g54gi4so5p.kirk.replit.dev"
