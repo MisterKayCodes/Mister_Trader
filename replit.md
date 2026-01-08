@@ -70,3 +70,6 @@ Mister Trader is a comprehensive trading journal and management system built wit
 - Created React frontend with Vite + Tailwind CSS
 - Created comprehensive INSTRUCTIONS.md documentation
 - Updated README.md with full feature list
+- **Added main menu buttons** for Stats, Export, Strategies, Plans (previously only accessible via commands)
+- Added inline keyboards for Strategy and Plan management
+- Added `app/telegram/utils/auth.py` helper for state authentication
