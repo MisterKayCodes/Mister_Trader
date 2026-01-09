@@ -11,7 +11,7 @@ from app.telegram.keyboards.inline_keyboards import get_account_options
 
 logger = logging.getLogger(__name__)
 router = Router()
-BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:5000")
 
 # --- Main Menu Entry ---
 

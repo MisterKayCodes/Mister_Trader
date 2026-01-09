@@ -7,7 +7,7 @@ from app.telegram.states.account_states import AccountStates
 from app.telegram.keyboards.reply_keyboards import get_main_menu
 
 # Rule 11: Backend integration settings
-BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:5000")
 logger = logging.getLogger(__name__)
 
 async def cmd_start(message: Message, state: FSMContext):
