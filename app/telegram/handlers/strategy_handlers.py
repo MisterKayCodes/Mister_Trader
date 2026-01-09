@@ -1,3 +1,5 @@
+import os
+import httpx
 import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
@@ -6,18 +8,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.core.database import SessionLocal
-from app.services.strategy_service import (
-    create_strategy,
-    list_strategies,
-    get_strategy,
-    delete_strategy,
-    format_strategy_summary
-)
-from app.telegram.utils.auth import get_user_id_from_state
+from app.telegram.keyboards.reply_keyboards import get_main_menu
 
 logger = logging.getLogger(__name__)
 router = Router()
+BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
 
 
 class StrategyStates(StatesGroup):
@@ -39,8 +34,8 @@ def get_strategy_menu_keyboard():
 def get_strategy_list_keyboard(strategies):
     builder = InlineKeyboardBuilder()
     for s in strategies[:10]:
-        status = "Active" if s.is_active else "Inactive"
-        builder.button(text=f"{s.name} ({status})", callback_data=f"strategy:view:{s.id}")
+        status = "Active" if s.get("is_active", True) else "Inactive"
+        builder.button(text=f"{s['name']} ({status})", callback_data=f"strategy:view:{s['id']}")
     builder.button(text="Back", callback_data="strategy:menu")
     builder.adjust(1)
     return builder.as_markup()
@@ -56,14 +51,15 @@ def get_strategy_detail_keyboard(strategy_id):
 
 @router.message(F.text == "📋 Strategies")
 async def menu_strategy(message: Message, state: FSMContext):
-    """Handler for main menu Strategies button."""
     await cmd_strategy(message, state)
 
 
 @router.message(Command("strategy"))
 async def cmd_strategy(message: Message, state: FSMContext):
-    user_id = await get_user_id_from_state(state)
-    if not user_id:
+    user_data = await state.get_data() or {}
+    auth_token = user_data.get("access_token")
+    
+    if not auth_token:
         await message.answer("Please /login first.")
         return
     
@@ -86,14 +82,22 @@ async def cb_strategy_menu(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "strategy:list")
 async def cb_strategy_list(callback: CallbackQuery, state: FSMContext):
-    user_id = await get_user_id_from_state(state)
-    if not user_id:
+    user_data = await state.get_data() or {}
+    auth_token = user_data.get("access_token")
+    
+    if not auth_token:
         await callback.answer("Please /login first.", show_alert=True)
         return
     
-    db = SessionLocal()
     try:
-        strategies = list_strategies(db, user_id)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{BOT_BACKEND_URL}/api/v1/strategies",
+                headers={"Authorization": f"Bearer {auth_token}"},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            strategies = response.json()
         
         if not strategies:
             await callback.message.edit_text(
@@ -107,40 +111,61 @@ async def cb_strategy_list(callback: CallbackQuery, state: FSMContext):
                 reply_markup=get_strategy_list_keyboard(strategies),
                 parse_mode="HTML"
             )
-    finally:
-        db.close()
+    except Exception as e:
+        logger.error(f"Strategy list error: {e}")
+        await callback.answer("Failed to fetch strategies.", show_alert=True)
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("strategy:view:"))
 async def cb_strategy_view(callback: CallbackQuery, state: FSMContext):
-    user_id = await get_user_id_from_state(state)
-    if not user_id:
+    user_data = await state.get_data() or {}
+    auth_token = user_data.get("access_token")
+    
+    if not auth_token:
         await callback.answer("Please /login first.", show_alert=True)
         return
     
     strategy_id = int(callback.data.split(":")[2])
     
-    db = SessionLocal()
     try:
-        strategy = get_strategy(db, user_id, strategy_id)
-        if not strategy:
-            await callback.answer("Strategy not found.", show_alert=True)
-            return
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{BOT_BACKEND_URL}/api/v1/strategies/{strategy_id}",
+                headers={"Authorization": f"Bearer {auth_token}"},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            strategy = response.json()
         
-        summary = format_strategy_summary(strategy)
+        lines = [f"<b>{strategy['name']}</b>\n"]
+        if strategy.get("description"):
+            lines.append(f"<i>{strategy['description']}</i>\n")
+        if strategy.get("entry_criteria"):
+            lines.append(f"Entry: {strategy['entry_criteria']}")
+        if strategy.get("exit_criteria"):
+            lines.append(f"Exit: {strategy['exit_criteria']}")
+        if strategy.get("risk_per_trade"):
+            lines.append(f"Risk: {strategy['risk_per_trade']}")
+        
         await callback.message.edit_text(
-            summary,
+            "\n".join(lines),
             reply_markup=get_strategy_detail_keyboard(strategy_id),
             parse_mode="HTML"
         )
-    finally:
-        db.close()
+    except Exception as e:
+        logger.error(f"Strategy view error: {e}")
+        await callback.answer("Strategy not found.", show_alert=True)
     await callback.answer()
 
 
 @router.callback_query(F.data == "strategy:new")
 async def cb_strategy_new(callback: CallbackQuery, state: FSMContext):
+    user_data = await state.get_data() or {}
+    if not user_data.get("access_token"):
+        await callback.answer("Please /login first.", show_alert=True)
+        return
+    
     await state.set_state(StrategyStates.waiting_name)
     await callback.message.edit_text(
         "<b>Create New Strategy</b>\n\nWhat's the name of this strategy?",
@@ -151,7 +176,7 @@ async def cb_strategy_new(callback: CallbackQuery, state: FSMContext):
 
 @router.message(StrategyStates.waiting_name)
 async def process_strategy_name(message: Message, state: FSMContext):
-    await state.update_data(name=message.text)
+    await state.update_data(strategy_name=message.text)
     await state.set_state(StrategyStates.waiting_description)
     await message.answer("Describe your strategy briefly (or send 'skip'):")
 
@@ -159,7 +184,7 @@ async def process_strategy_name(message: Message, state: FSMContext):
 @router.message(StrategyStates.waiting_description)
 async def process_strategy_description(message: Message, state: FSMContext):
     desc = message.text if message.text.lower() != "skip" else None
-    await state.update_data(description=desc)
+    await state.update_data(strategy_description=desc)
     await state.set_state(StrategyStates.waiting_entry)
     await message.answer("Entry criteria? (or send 'skip'):")
 
@@ -167,7 +192,7 @@ async def process_strategy_description(message: Message, state: FSMContext):
 @router.message(StrategyStates.waiting_entry)
 async def process_strategy_entry(message: Message, state: FSMContext):
     entry = message.text if message.text.lower() != "skip" else None
-    await state.update_data(entry_criteria=entry)
+    await state.update_data(strategy_entry=entry)
     await state.set_state(StrategyStates.waiting_exit)
     await message.answer("Exit criteria? (or send 'skip'):")
 
@@ -175,7 +200,7 @@ async def process_strategy_entry(message: Message, state: FSMContext):
 @router.message(StrategyStates.waiting_exit)
 async def process_strategy_exit(message: Message, state: FSMContext):
     exit_c = message.text if message.text.lower() != "skip" else None
-    await state.update_data(exit_criteria=exit_c)
+    await state.update_data(strategy_exit=exit_c)
     await state.set_state(StrategyStates.waiting_risk)
     await message.answer("Risk per trade? (e.g., '1%' or 'skip'):")
 
@@ -183,57 +208,70 @@ async def process_strategy_exit(message: Message, state: FSMContext):
 @router.message(StrategyStates.waiting_risk)
 async def process_strategy_risk(message: Message, state: FSMContext):
     risk = message.text if message.text.lower() != "skip" else None
-    data = await state.get_data()
-    await state.clear()
     
-    user_id = await get_user_id_from_state(state)
-    if not user_id:
+    data = await state.get_data()
+    auth_token = data.get("access_token")
+    
+    if not auth_token:
+        await state.clear()
         await message.answer("Session expired. Please /login again.")
         return
     
-    db = SessionLocal()
     try:
-        strategy = create_strategy(
-            db,
-            user_id=user_id,
-            name=data["name"],
-            description=data.get("description"),
-            entry_criteria=data.get("entry_criteria"),
-            exit_criteria=data.get("exit_criteria"),
-            risk_per_trade=risk
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{BOT_BACKEND_URL}/api/v1/strategies",
+                headers={"Authorization": f"Bearer {auth_token}"},
+                json={
+                    "name": data["strategy_name"],
+                    "description": data.get("strategy_description"),
+                    "entry_criteria": data.get("strategy_entry"),
+                    "exit_criteria": data.get("strategy_exit"),
+                    "risk_per_trade": risk
+                },
+                timeout=10.0
+            )
+            response.raise_for_status()
+            strategy = response.json()
         
+        await state.set_state(None)
         await message.answer(
-            f"Strategy '<b>{strategy.name}</b>' created successfully!",
-            reply_markup=get_strategy_menu_keyboard(),
+            f"Strategy '<b>{strategy['name']}</b>' created successfully!",
+            reply_markup=get_main_menu(),
             parse_mode="HTML"
         )
     except Exception as e:
         logger.error(f"Failed to create strategy: {e}")
         await message.answer("Failed to create strategy. Please try again.")
-    finally:
-        db.close()
+        await state.set_state(None)
 
 
 @router.callback_query(F.data.startswith("strategy:delete:"))
 async def cb_strategy_delete(callback: CallbackQuery, state: FSMContext):
-    user_id = await get_user_id_from_state(state)
-    if not user_id:
+    user_data = await state.get_data() or {}
+    auth_token = user_data.get("access_token")
+    
+    if not auth_token:
         await callback.answer("Please /login first.", show_alert=True)
         return
     
     strategy_id = int(callback.data.split(":")[2])
     
-    db = SessionLocal()
     try:
-        if delete_strategy(db, user_id, strategy_id):
-            await callback.message.edit_text(
-                "Strategy deleted.",
-                reply_markup=get_strategy_menu_keyboard(),
-                parse_mode="HTML"
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                f"{BOT_BACKEND_URL}/api/v1/strategies/{strategy_id}",
+                headers={"Authorization": f"Bearer {auth_token}"},
+                timeout=10.0
             )
-            await callback.answer("Deleted!")
-        else:
-            await callback.answer("Strategy not found.", show_alert=True)
-    finally:
-        db.close()
+            response.raise_for_status()
+        
+        await callback.message.edit_text(
+            "Strategy deleted.",
+            reply_markup=get_strategy_menu_keyboard(),
+            parse_mode="HTML"
+        )
+        await callback.answer("Deleted!")
+    except Exception as e:
+        logger.error(f"Strategy delete error: {e}")
+        await callback.answer("Failed to delete strategy.", show_alert=True)
