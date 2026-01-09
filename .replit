@@ -22,10 +22,6 @@ args = "FastAPI Backend"
 task = "workflow.run"
 args = "Telegram Bot"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "React Frontend"
-
 [[workflows.workflow]]
 name = "FastAPI Backend"
 author = "agent"
@@ -45,18 +41,6 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m app.telegram.bot"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow]]
-name = "React Frontend"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd react && npm run dev"
-waitForPort = 5173
 
 [workflows.workflow.metadata]
 outputType = "console"

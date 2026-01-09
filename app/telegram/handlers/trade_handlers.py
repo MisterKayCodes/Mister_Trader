@@ -299,7 +299,7 @@ async def process_pre_emotion(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(TradeStates.waiting_for_rr, F.data.startswith("rr:"))
 async def process_rr(callback: CallbackQuery, state: FSMContext):
-    rr_val = callback.data.split(":")[1]
+    rr_val = callback.data.split(":", 1)[1]
     
     if rr_val == "Custom":
         await callback.message.answer("Enter your custom R:R (e.g. 2.5):")
@@ -308,10 +308,11 @@ async def process_rr(callback: CallbackQuery, state: FSMContext):
         return
     
     if rr_val == "Skip":
-        await state.update_data(risk_reward_ratio=None)
+        await state.update_data(risk_reward_ratio=None, risk_reward_display=None)
     else:
-        rr_float = float(rr_val.split(":")[1])
-        await state.update_data(risk_reward_ratio=rr_float)
+        parts = rr_val.split(":")
+        rr_float = float(parts[1]) / float(parts[0])
+        await state.update_data(risk_reward_ratio=rr_float, risk_reward_display=rr_val)
     
     await callback.answer()
     await _create_trade(callback.message, state)
@@ -321,7 +322,7 @@ async def process_rr(callback: CallbackQuery, state: FSMContext):
 async def process_custom_rr(message: Message, state: FSMContext):
     try:
         rr = float(message.text.strip())
-        await state.update_data(risk_reward_ratio=rr)
+        await state.update_data(risk_reward_ratio=rr, risk_reward_display=f"1:{rr}")
         await _create_trade(message, state)
     except ValueError:
         await message.answer("Enter a valid number (e.g. 2.5):")
@@ -357,12 +358,13 @@ async def _create_trade(message: Message, state: FSMContext):
                 session_display = get_session_display_name(data.get("trade_session", ""))
                 
                 await state.set_state(None)
+                rr_display = data.get('risk_reward_display') or data.get('risk_reward_ratio') or 'N/A'
                 await message.answer(
                     f"✅ <b>Trade Logged!</b>\n"
                     f"{payload['symbol']} {payload['side']} @ {payload['entry_price']}\n"
                     f"Session: {session_display}\n"
                     f"Emotion: {data.get('pre_trade_emotion', 'N/A')}\n"
-                    f"R:R: {data.get('risk_reward_ratio', 'N/A')}",
+                    f"R:R: {rr_display}",
                     reply_markup=get_main_menu(),
                     parse_mode="HTML"
                 )

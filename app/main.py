@@ -1,12 +1,12 @@
 import os
 import logging
 import sys
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-# Import the routers
 from app.api.v1 import (
     users, accounts, trade_drafts, trades, 
     activity, trade_media, psychology, voice_note,
@@ -14,6 +14,14 @@ from app.api.v1 import (
 )
 
 app = FastAPI(title=settings.PROJECT_NAME)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Setup structured JSON logging
 logger = logging.getLogger("mistertrader")
@@ -44,8 +52,8 @@ async def startup_event():
 # This makes the 'media' folder accessible via URL (e.g., /media/images/photo.jpg)
 app.mount("/media", StaticFiles(directory=settings.MEDIA_ROOT), name="media")
 
-@app.get("/")
-async def root():
+@app.get("/api")
+async def api_root():
     return {"message": "MisterTrader API is running", "docs": "/docs"}
 
 @app.get("/health")
@@ -65,3 +73,23 @@ app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(strategy.router, prefix="/api/v1")
 app.include_router(trading_plan.router, prefix="/api/v1")
 app.include_router(export.router, prefix="/api/v1")
+
+REACT_BUILD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "react", "dist")
+if os.path.exists(REACT_BUILD_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(REACT_BUILD_DIR, "assets")), name="assets")
+    
+    @app.get("/{full_path:path}")
+    async def serve_spa(request: Request, full_path: str):
+        api_paths = ["api/", "media/", "docs", "openapi.json", "redoc", "health"]
+        if any(full_path.startswith(p) or full_path == p.rstrip('/') for p in api_paths):
+            return JSONResponse({"detail": "Not found"}, status_code=404)
+        
+        file_path = os.path.join(REACT_BUILD_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        index_path = os.path.join(REACT_BUILD_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path, headers={"Cache-Control": "no-cache"})
+        
+        return JSONResponse({"detail": "Not found"}, status_code=404)

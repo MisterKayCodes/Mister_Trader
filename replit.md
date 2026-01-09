@@ -44,9 +44,10 @@ Mister Trader is a comprehensive trading journal and management system built wit
 
 ### Frontend Architecture (React)
 - **Framework**: Vite + React + Tailwind CSS
-- **Port**: 5173 (dev server)
-- **Pages**: Dashboard, Trades, Strategies, Plans, Settings
-- **API Client**: `/react/src/utils/api.js`
+- **Served from**: FastAPI on port 5000 (built static files in `react/dist/`)
+- **Pages**: Dashboard, Trade Journal, Strategies, Trading Plans, Settings
+- **API Client**: `/react/src/utils/api.js` (uses relative `/api/v1` paths)
+- **Build command**: `cd react && npm run build` (outputs to `react/dist/`)
 
 ### Key Utilities
 - `app/utils/session_utils.py` - Trading session detection (London/NY/Asian/Sydney)
@@ -74,6 +75,10 @@ Backend `/api/v1/analytics/stats` returns:
 - `current_streak`, `current_streak_type`, `best_win_streak`, `worst_loss_streak`
 
 ## Recent Changes (2026-01-09)
+- **Fixed R:R bug**: Risk:Reward now correctly parses "1:2" format (was only extracting "1" instead of full ratio)
+- **React frontend integrated with FastAPI**: Built React app now served from FastAPI on port 5000
+- Removed separate React workflow - single server architecture
+- Added CORS middleware to FastAPI for browser requests
 - Added new analytics endpoints: `/api/v1/analytics/days`, `/api/v1/analytics/symbols`, `/api/v1/analytics/psychology`
 - Added day-of-week performance analysis
 - Added symbol/pair performance tracking
