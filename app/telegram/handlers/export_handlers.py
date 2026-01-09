@@ -30,7 +30,7 @@ async def cmd_export(message: Message, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{BOT_BACKEND_URL}/api/v1/export/trades/",
+                f"{BOT_BACKEND_URL}/api/v1/export/trades/csv",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=30.0
             )
@@ -67,7 +67,7 @@ async def cb_export_all(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{BOT_BACKEND_URL}/api/v1/export/trades/",
+                f"{BOT_BACKEND_URL}/api/v1/export/trades/csv",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=30.0
             )

@@ -312,7 +312,7 @@ async def process_plan_notes(message: Message, state: FSMContext):
     auth_token = data.get("access_token")
     
     if not auth_token:
-        await state.clear()
+        await state.set_state(None)
         await message.answer("Session expired. Please /login again.")
         return
     

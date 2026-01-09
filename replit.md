@@ -58,7 +58,29 @@ Mister Trader is a comprehensive trading journal and management system built wit
 - Preferred communication style: Simple, everyday language
 - Database: Exclusively SQLite for development
 
-## Recent Changes (2026-01-08)
+## API URL Conventions (CRITICAL)
+When calling backend from Telegram handlers:
+- **Analytics endpoints**: NO trailing slash (`/api/v1/analytics/stats`, `/api/v1/analytics/sessions`)
+- **Strategy/Plan list & create**: WITH trailing slash (`/api/v1/strategies/`, `/api/v1/plans/`)
+- **Strategy/Plan by ID**: NO trailing slash (`/api/v1/strategies/{id}`, `/api/v1/plans/{id}`)
+- **Export CSV**: `/api/v1/export/trades/csv`
+
+## Stats Response Fields (CRITICAL)
+Backend `/api/v1/analytics/stats` returns:
+- `winning_trades` (NOT `total_wins`)
+- `losing_trades` (NOT `total_losses`)
+- `total_trades`, `win_rate`, `total_pnl`
+- `best_trade_pnl`, `worst_trade_pnl`
+- `current_streak`, `current_streak_type`, `best_win_streak`, `worst_loss_streak`
+
+## Recent Changes (2026-01-09)
+- Fixed API URL trailing slash issues causing 307 redirects
+- Fixed stats handlers to use correct response field names
+- Fixed export URL to use `/trades/csv`
+- All Telegram handlers now have FSM states defined inline (StrategyStates, PlanStates)
+- Removed app/telegram/utils/auth.py - all handlers check access_token from state directly
+
+## Previous Changes (2026-01-08)
 - Added Strategy model and CRUD handlers
 - Added TradingPlan model and CRUD handlers
 - Added UserStats for aggregated analytics
@@ -72,4 +94,3 @@ Mister Trader is a comprehensive trading journal and management system built wit
 - Updated README.md with full feature list
 - **Added main menu buttons** for Stats, Export, Strategies, Plans (previously only accessible via commands)
 - Added inline keyboards for Strategy and Plan management
-- Added `app/telegram/utils/auth.py` helper for state authentication

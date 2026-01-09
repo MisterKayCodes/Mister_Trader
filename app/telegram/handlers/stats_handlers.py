@@ -27,7 +27,7 @@ def get_stats_keyboard():
 async def _get_stats(auth_token: str):
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{BOT_BACKEND_URL}/api/v1/analytics/stats/",
+            f"{BOT_BACKEND_URL}/api/v1/analytics/stats",
             headers={"Authorization": f"Bearer {auth_token}"},
             timeout=10.0
         )
@@ -56,7 +56,7 @@ async def cmd_stats(message: Message, state: FSMContext):
         lines.append(f"Total Trades: {stats.get('total_trades', 0)}")
         lines.append(f"Win Rate: {stats.get('win_rate', 0):.1f}%")
         lines.append(f"Total P&L: ${stats.get('total_pnl', 0):,.2f}")
-        lines.append(f"Wins: {stats.get('total_wins', 0)} | Losses: {stats.get('total_losses', 0)}")
+        lines.append(f"Wins: {stats.get('winning_trades', 0)} | Losses: {stats.get('losing_trades', 0)}")
         
         await message.answer(
             "\n".join(lines),
@@ -84,7 +84,9 @@ async def cb_stats_overview(callback: CallbackQuery, state: FSMContext):
         lines.append(f"Total Trades: {stats.get('total_trades', 0)}")
         lines.append(f"Win Rate: {stats.get('win_rate', 0):.1f}%")
         lines.append(f"Total P&L: ${stats.get('total_pnl', 0):,.2f}")
-        lines.append(f"Wins: {stats.get('total_wins', 0)} | Losses: {stats.get('total_losses', 0)}")
+        lines.append(f"Wins: {stats.get('winning_trades', 0)} | Losses: {stats.get('losing_trades', 0)}")
+        lines.append(f"Best Trade: ${stats.get('best_trade_pnl', 0):,.2f}")
+        lines.append(f"Worst Trade: ${stats.get('worst_trade_pnl', 0):,.2f}")
         
         await callback.message.edit_text(
             "\n".join(lines),
@@ -107,19 +109,25 @@ async def cb_stats_sessions(callback: CallbackQuery, state: FSMContext):
         return
     
     try:
-        stats = await _get_stats(auth_token)
-        sessions = stats.get("sessions", {})
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{BOT_BACKEND_URL}/api/v1/analytics/sessions",
+                headers={"Authorization": f"Bearer {auth_token}"},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            data = response.json()
         
+        details = data.get("details", {})
         lines = ["<b>Session Performance</b>\n"]
         
-        for session_name in ["london", "newyork", "asian", "sydney"]:
-            session_data = sessions.get(session_name, {})
+        for session_name, display_name in [("london", "London"), ("newyork", "New York"), ("asian", "Asian"), ("sydney", "Sydney")]:
+            session_data = details.get(session_name, {})
             wins = session_data.get("wins", 0)
             losses = session_data.get("losses", 0)
             total = wins + losses
             if total > 0:
                 wr = round((wins / total) * 100, 1)
-                display_name = session_name.replace("newyork", "New York").title()
                 lines.append(f"{display_name}: {wr}% ({wins}W / {losses}L)")
         
         if len(lines) == 1:
@@ -148,12 +156,14 @@ async def cb_stats_strategies(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{BOT_BACKEND_URL}/api/v1/analytics/strategies/",
+                f"{BOT_BACKEND_URL}/api/v1/analytics/strategies",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=10.0
             )
             response.raise_for_status()
-            performance = response.json()
+            data = response.json()
+        
+        performance = data.get("strategies", [])
         
         if not performance:
             await callback.message.edit_text(
@@ -189,19 +199,21 @@ async def cb_stats_time(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{BOT_BACKEND_URL}/api/v1/analytics/hourly/",
+                f"{BOT_BACKEND_URL}/api/v1/analytics/hourly",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=10.0
             )
             response.raise_for_status()
-            hourly = response.json()
+            data = response.json()
+        
+        hourly = data.get("hourly", {})
         
         best_hours = []
-        for hour_str, data in hourly.items():
-            total = data["wins"] + data["losses"]
+        for hour_str, hour_data in hourly.items():
+            total = hour_data.get("wins", 0) + hour_data.get("losses", 0)
             if total >= 2:
-                wr = (data["wins"] / total) * 100
-                best_hours.append((int(hour_str), wr, data["wins"], data["losses"]))
+                wr = (hour_data.get("wins", 0) / total) * 100
+                best_hours.append((int(hour_str), wr, hour_data.get("wins", 0), hour_data.get("losses", 0)))
         
         best_hours.sort(key=lambda x: x[1], reverse=True)
         
@@ -279,18 +291,19 @@ async def cb_stats_refresh(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{BOT_BACKEND_URL}/api/v1/analytics/refresh/",
+                f"{BOT_BACKEND_URL}/api/v1/analytics/refresh",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=10.0
             )
             response.raise_for_status()
-            stats = response.json()
+        
+        stats = await _get_stats(auth_token)
         
         lines = ["<b>Your Trading Statistics</b> (Refreshed)\n"]
         lines.append(f"Total Trades: {stats.get('total_trades', 0)}")
         lines.append(f"Win Rate: {stats.get('win_rate', 0):.1f}%")
         lines.append(f"Total P&L: ${stats.get('total_pnl', 0):,.2f}")
-        lines.append(f"Wins: {stats.get('total_wins', 0)} | Losses: {stats.get('total_losses', 0)}")
+        lines.append(f"Wins: {stats.get('winning_trades', 0)} | Losses: {stats.get('losing_trades', 0)}")
         
         await callback.message.edit_text(
             "\n".join(lines),
