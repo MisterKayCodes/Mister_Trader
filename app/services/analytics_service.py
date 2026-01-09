@@ -228,3 +228,155 @@ def format_session_comparison(stats: UserStats) -> str:
         lines.append(f"{session}: {win_rate}% ({wins}W / {losses}L)")
     
     return "\n".join(lines)
+
+
+def get_day_of_week_performance(db: Session, user_id: int) -> Dict[int, Dict[str, Any]]:
+    trades_stmt = select(Trade).where(
+        and_(Trade.user_id == user_id, Trade.state == "closed")
+    )
+    trades = db.scalars(trades_stmt).all()
+    
+    days = {i: {"wins": 0, "losses": 0, "pnl": 0.0} for i in range(7)}
+    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    
+    for trade in trades:
+        dow = trade.day_of_week
+        if dow is None and trade.open_timestamp:
+            dow = trade.open_timestamp.weekday()
+        
+        if dow is not None:
+            if trade.outcome == "WIN":
+                days[dow]["wins"] += 1
+            elif trade.outcome == "LOSS":
+                days[dow]["losses"] += 1
+            days[dow]["pnl"] += trade.pnl or 0
+    
+    result = {}
+    for day_num, stats in days.items():
+        total = stats["wins"] + stats["losses"]
+        if total > 0:
+            result[day_names[day_num]] = {
+                "wins": stats["wins"],
+                "losses": stats["losses"],
+                "win_rate": round((stats["wins"] / total) * 100, 1),
+                "pnl": round(stats["pnl"], 2),
+                "total": total
+            }
+    
+    return result
+
+
+def get_symbol_performance(db: Session, user_id: int) -> List[Dict[str, Any]]:
+    trades_stmt = select(Trade).where(
+        and_(Trade.user_id == user_id, Trade.state == "closed")
+    )
+    trades = db.scalars(trades_stmt).all()
+    
+    symbols = {}
+    for trade in trades:
+        symbol = trade.symbol
+        if symbol not in symbols:
+            symbols[symbol] = {"wins": 0, "losses": 0, "pnl": 0.0, "trades": 0}
+        
+        symbols[symbol]["trades"] += 1
+        if trade.outcome == "WIN":
+            symbols[symbol]["wins"] += 1
+        elif trade.outcome == "LOSS":
+            symbols[symbol]["losses"] += 1
+        symbols[symbol]["pnl"] += trade.pnl or 0
+    
+    result = []
+    for symbol, stats in symbols.items():
+        total = stats["wins"] + stats["losses"]
+        if total > 0:
+            result.append({
+                "symbol": symbol,
+                "trades": stats["trades"],
+                "wins": stats["wins"],
+                "losses": stats["losses"],
+                "win_rate": round((stats["wins"] / total) * 100, 1),
+                "pnl": round(stats["pnl"], 2)
+            })
+    
+    return sorted(result, key=lambda x: x["win_rate"], reverse=True)
+
+
+def get_psychology_insights(db: Session, user_id: int) -> Dict[str, Any]:
+    trades_stmt = select(Trade).where(
+        and_(Trade.user_id == user_id, Trade.state == "closed")
+    )
+    trades = db.scalars(trades_stmt).all()
+    
+    emotion_stats = {}
+    emotion_by_symbol = {}
+    
+    for trade in trades:
+        emotion = trade.pre_trade_emotion
+        if not emotion:
+            continue
+        
+        if emotion not in emotion_stats:
+            emotion_stats[emotion] = {"wins": 0, "losses": 0, "pnl": 0.0}
+        
+        if trade.outcome == "WIN":
+            emotion_stats[emotion]["wins"] += 1
+        elif trade.outcome == "LOSS":
+            emotion_stats[emotion]["losses"] += 1
+        emotion_stats[emotion]["pnl"] += trade.pnl or 0
+        
+        key = f"{emotion}_{trade.symbol}"
+        if key not in emotion_by_symbol:
+            emotion_by_symbol[key] = {
+                "emotion": emotion,
+                "symbol": trade.symbol,
+                "wins": 0,
+                "losses": 0,
+                "pnl": 0.0
+            }
+        
+        if trade.outcome == "WIN":
+            emotion_by_symbol[key]["wins"] += 1
+        elif trade.outcome == "LOSS":
+            emotion_by_symbol[key]["losses"] += 1
+        emotion_by_symbol[key]["pnl"] += trade.pnl or 0
+    
+    emotion_results = []
+    for emotion, stats in emotion_stats.items():
+        total = stats["wins"] + stats["losses"]
+        if total > 0:
+            emotion_results.append({
+                "emotion": emotion,
+                "trades": total,
+                "wins": stats["wins"],
+                "losses": stats["losses"],
+                "win_rate": round((stats["wins"] / total) * 100, 1),
+                "pnl": round(stats["pnl"], 2)
+            })
+    
+    best_combos = []
+    for key, data in emotion_by_symbol.items():
+        total = data["wins"] + data["losses"]
+        if total >= 2:
+            wr = round((data["wins"] / total) * 100, 1)
+            best_combos.append({
+                "emotion": data["emotion"],
+                "symbol": data["symbol"],
+                "win_rate": wr,
+                "trades": total,
+                "pnl": round(data["pnl"], 2)
+            })
+    
+    best_combos.sort(key=lambda x: x["win_rate"], reverse=True)
+    
+    insights = []
+    for combo in best_combos[:3]:
+        if combo["win_rate"] >= 60:
+            insights.append(
+                f"You win {combo['win_rate']}% when feeling {combo['emotion']} on {combo['symbol']}"
+            )
+    
+    return {
+        "by_emotion": sorted(emotion_results, key=lambda x: x["win_rate"], reverse=True),
+        "best_combos": best_combos[:5],
+        "insights": insights
+    }

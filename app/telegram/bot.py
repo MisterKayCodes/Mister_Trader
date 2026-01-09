@@ -20,6 +20,7 @@ from app.telegram.handlers import (
     strategy_handlers,
     plan_handlers
 )
+from app.telegram.scheduler import setup_scheduler
 
 load_dotenv()
 
@@ -53,11 +54,25 @@ def register_all_handlers(dispatcher: Dispatcher):
 
 async def main():
     register_all_handlers(dp)
+    
+    scheduler = None
+    try:
+        scheduler = setup_scheduler(bot)
+        scheduler.start()
+        logger.info("Weekly summary scheduler started (Sundays at 20:00 UTC)")
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
+    
     logger.info("--- MisterTrader Bot Online (HTML Mode 2026) ---")
     
     try:
         await dp.start_polling(bot, default=dict(parse_mode="HTML"))
     finally:
+        if scheduler:
+            try:
+                scheduler.shutdown()
+            except Exception as e:
+                logger.error(f"Error shutting down scheduler: {e}")
         await bot.session.close()
         await storage.close()
 

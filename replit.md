@@ -74,6 +74,15 @@ Backend `/api/v1/analytics/stats` returns:
 - `current_streak`, `current_streak_type`, `best_win_streak`, `worst_loss_streak`
 
 ## Recent Changes (2026-01-09)
+- Added new analytics endpoints: `/api/v1/analytics/days`, `/api/v1/analytics/symbols`, `/api/v1/analytics/psychology`
+- Added day-of-week performance analysis
+- Added symbol/pair performance tracking
+- Added psychology insights (win rate by emotion, emotion+symbol combinations)
+- Added weekly summary scheduler (APScheduler) - sends summaries every Sunday at 20:00 UTC
+- Updated stats inline keyboard with new tabs: Pairs, Days, Psychology
+- Stats handlers now show actionable insights like "You win X% when feeling Y on Z"
+
+## Previous Changes (2026-01-09 early)
 - Fixed API URL trailing slash issues causing 307 redirects
 - Fixed stats handlers to use correct response field names
 - Fixed export URL to use `/trades/csv`

@@ -9,7 +9,10 @@ from app.services.analytics_service import (
     get_win_rate,
     get_session_win_rates,
     get_strategy_performance,
-    get_hourly_performance
+    get_hourly_performance,
+    get_day_of_week_performance,
+    get_symbol_performance,
+    get_psychology_insights
 )
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
@@ -86,3 +89,30 @@ def refresh_stats(
 ):
     stats = recalculate_user_stats(db, current_user.id)
     return {"message": "Stats refreshed successfully", "total_trades": stats.total_trades}
+
+
+@router.get("/days")
+def get_day_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    days = get_day_of_week_performance(db, current_user.id)
+    return {"days": days}
+
+
+@router.get("/symbols")
+def get_symbol_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    symbols = get_symbol_performance(db, current_user.id)
+    return {"symbols": symbols}
+
+
+@router.get("/psychology")
+def get_psychology_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    psychology = get_psychology_insights(db, current_user.id)
+    return psychology

@@ -12,6 +12,7 @@ class Trade(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False, index=True)
     strategy_id = Column(Integer, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True, index=True)
+    plan_id = Column(Integer, ForeignKey("trading_plans.id", ondelete="SET NULL"), nullable=True, index=True)
 
     symbol = Column(String(20), nullable=False)
     side = Column(String(10), nullable=False)
@@ -29,6 +30,10 @@ class Trade(Base):
     open_timestamp = Column(DateTime(timezone=True), nullable=True)
     close_timestamp = Column(DateTime(timezone=True), nullable=True)
     
+    pre_trade_emotion = Column(String(30), nullable=True)
+    post_trade_emotion = Column(String(30), nullable=True)
+    day_of_week = Column(Integer, nullable=True)
+    
     notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -37,3 +42,4 @@ class Trade(Base):
     account = relationship("Account", backref="trades")
     user = relationship("User", backref="trades")
     strategy = relationship("Strategy", backref="trades")
+    plan = relationship("TradingPlan", backref="trades")
