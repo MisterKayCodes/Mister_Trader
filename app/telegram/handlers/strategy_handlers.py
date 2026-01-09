@@ -92,7 +92,7 @@ async def cb_strategy_list(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{BOT_BACKEND_URL}/api/v1/strategies",
+                f"{BOT_BACKEND_URL}/api/v1/strategies/",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=10.0
             )
@@ -220,7 +220,7 @@ async def process_strategy_risk(message: Message, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{BOT_BACKEND_URL}/api/v1/strategies",
+                f"{BOT_BACKEND_URL}/api/v1/strategies/",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 json={
                     "name": data["strategy_name"],

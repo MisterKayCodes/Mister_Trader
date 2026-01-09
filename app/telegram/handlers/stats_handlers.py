@@ -27,7 +27,7 @@ def get_stats_keyboard():
 async def _get_stats(auth_token: str):
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{BOT_BACKEND_URL}/api/v1/analytics/stats",
+            f"{BOT_BACKEND_URL}/api/v1/analytics/stats/",
             headers={"Authorization": f"Bearer {auth_token}"},
             timeout=10.0
         )
@@ -148,7 +148,7 @@ async def cb_stats_strategies(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{BOT_BACKEND_URL}/api/v1/analytics/strategies",
+                f"{BOT_BACKEND_URL}/api/v1/analytics/strategies/",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=10.0
             )
@@ -189,7 +189,7 @@ async def cb_stats_time(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{BOT_BACKEND_URL}/api/v1/analytics/hourly",
+                f"{BOT_BACKEND_URL}/api/v1/analytics/hourly/",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=10.0
             )
@@ -279,7 +279,7 @@ async def cb_stats_refresh(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{BOT_BACKEND_URL}/api/v1/analytics/refresh",
+                f"{BOT_BACKEND_URL}/api/v1/analytics/refresh/",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=10.0
             )

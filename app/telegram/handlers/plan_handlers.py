@@ -147,7 +147,7 @@ async def cb_plan_list(callback: CallbackQuery, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{BOT_BACKEND_URL}/api/v1/plans",
+                f"{BOT_BACKEND_URL}/api/v1/plans/",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=10.0
             )
@@ -319,7 +319,7 @@ async def process_plan_notes(message: Message, state: FSMContext):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{BOT_BACKEND_URL}/api/v1/plans",
+                f"{BOT_BACKEND_URL}/api/v1/plans/",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 json={
                     "title": data["plan_title"],
