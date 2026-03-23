@@ -1,20 +1,27 @@
-# Mister Trader - Complete Project Guide
+# Detailed Project Guide
 
-A comprehensive trading journal and management system with FastAPI backend, React frontend, and Telegram bot interface.
+This document provides a technical walkthrough of how Mister Trader is put together. It covers everything from the database structure to the logical flow of the Telegram bot and the web dashboard. 
+
+If you just need a broad overview of what the app does, please start with the main readme file. This guide is intended for those who want to understand the underlying mechanics or contribute to the project.
 
 ## Quick Start
 
+To get the system running on your local machine, follow these three steps.
+
 ### 1. Start the Backend API
+Use this command to launch the FastAPI server. It handles all the data processing and storage.
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 5000
 ```
 
 ### 2. Start the Telegram Bot
+While the API is running, start the bot script in a separate terminal. This will allow you to interact with the system via Telegram.
 ```bash
 python -m app.telegram.bot
 ```
 
-### 3. Start the React Frontend (Development)
+### 3. Start the React Frontend
+Finally, go into the react directory and run the development server to see your dashboard.
 ```bash
 cd react && npm run dev
 ```

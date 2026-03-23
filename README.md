@@ -1,96 +1,38 @@
 # Mister Trader
 
-A comprehensive trading journal and management system with FastAPI backend, React frontend, and Telegram bot interface.
+Mister Trader is a specialized tool designed to help traders keep a focused and meaningful record of their activity. It combines the convenience of a Telegram bot for quick data entry with a detailed web dashboard for deep analysis of performance and habits.
 
-## Features
+The project was built to solve the common problem of fragmented trading data. By allowing you to log trades and thoughts directly from your phone while providing a professional interface for review, it helps bridge the gap between execution and reflection.
 
-- **Trade Logging** - Log trades via Telegram bot with automatic session detection
-- **Performance Analytics** - Win rate, P&L, session comparison, strategy effectiveness
-- **Session Tracking** - Automatic detection of London, NY, Asian, Sydney sessions
-- **Strategy Management** - Define and track multiple trading strategies
-- **Trading Plans** - Create daily trading plans with bias, watchlist, mental state
-- **Streak Tracking** - Current and best win/loss streaks
-- **Time Analysis** - Best performing hours and sessions
-- **CSV Export** - Export all trade data for external analysis
-- **React Dashboard** - Modern web interface for data visualization
-- **Psychology Tracking** - Monitor emotional state and plan adherence
-- **Media Management** - Attach screenshots and voice notes to trades
+## Core Capabilities
 
-## Quick Start
+The system is built around three main parts that work together to give you a complete picture of your trading.
 
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- Telegram Bot Token
+### Telegram Companion
+The bot acts as your personal assistant. You can use it to open and close trades, record voice notes about your current mindset, and upload screenshots of your charts. It also handles basic administrative tasks like signing up or viewing your current statistics. 
 
-### 1. Set Environment Variables
-```bash
-export TELEGRAM_BOT_TOKEN="your_token_here"
-```
+One of the most useful features is the automatic session detection. When you log a trade, the system identifies if you were trading during London, New York, or Asian hours. This helps you figure out when you are most effective without manual tagging.
 
-### 2. Start Backend
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 5000
-```
+### Performance Analytics
+Beyond simple win and loss tracking, the app analyzes your data to find patterns. It tracks your winning and losing streaks, compares your performance across different strategies, and identifies which days of the week or hours of the day generate your best results.
 
-### 3. Start Telegram Bot
-```bash
-python -m app.telegram.bot
-```
+### Psychology Tracking
+Successful trading is often about mindset. This project allows you to record your emotional state and discipline levels for every trade. You can log whether you followed your plan, how confident you felt, and what the market conditions were like. This data is then used to provide insights into how your psychology affects your bottom line.
 
-### 4. Start React Frontend (Optional)
-```bash
-cd react
-npm install
-npm run dev
-```
+### Media and Voice Notes
+You can attach images and voice recordings to your trades. The voice notes are particularly helpful for capturing the fast moving thoughts you have during a live session. These recordings can be played back directly from the web dashboard during your weekend review.
 
-## Telegram Commands
+## Architecture
 
-| Command | Description |
-|---------|-------------|
-| `/start` | Welcome message |
-| `/signup` | Create account with PIN |
-| `/login` | Authenticate session |
-| `/stats` | View trading statistics |
-| `/export` | Download trades as CSV |
-| `/strategy` | Manage trading strategies |
-| `/plan` | Create/view trading plans |
+The technical side of the project consists of a FastAPI backend using a Python based environment. It stores data in a simple and portable SQLite database. The frontend is built with React and provides a clean, modern interface for all your data.
 
-## Tech Stack
+## Getting Started
 
-- **Backend**: FastAPI, SQLAlchemy, SQLite
-- **Bot**: Aiogram 3.x with FSM
-- **Frontend**: React, Vite, Tailwind CSS
-- **Database**: SQLite (mister_trader.db)
+To get the project running locally, you will need Python and Node.js installed on your system. 
 
-## Project Structure
+1. Setup your environment by creating a file for your Telegram bot token.
+2. Start the backend api using the provided uvicorn command.
+3. Launch the Telegram bot script to start receiving messages.
+4. Run the React development server to access the web dashboard.
 
-```
-├── app/
-│   ├── api/v1/          # REST endpoints
-│   ├── core/            # Config, database
-│   ├── models/          # SQLAlchemy models
-│   ├── services/        # Business logic
-│   ├── telegram/        # Bot handlers
-│   └── utils/           # Utilities
-├── react/               # React frontend
-├── alembic/             # Migrations
-└── media/               # Uploads
-```
-
-## API Documentation
-
-Visit `/docs` when the backend is running for interactive API documentation.
-
-## Documentation
-
-See [INSTRUCTIONS.md](./INSTRUCTIONS.md) for detailed project documentation including:
-- Complete architecture overview
-- Handler and service documentation
-- Debugging guide
-- Deployment instructions
-
-## License
-
-MIT
+For more detailed technical information and a full list of commands, please refer to the instructions file included in the repository.
