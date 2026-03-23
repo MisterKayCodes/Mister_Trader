@@ -12,11 +12,7 @@ from app.telegram.keyboards import inline_keyboards as ik
 
 logger = logging.getLogger(__name__)
 router = Router()
-<<<<<<< HEAD
 BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000").rstrip("/")
-=======
-BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:5000").rstrip("/")
->>>>>>> 9e6925a (Syncing latest local changes for deployment)
 
 def _check_session(user_data: dict) -> bool:
     return bool(user_data.get("access_token") and user_data.get("active_account_id"))
