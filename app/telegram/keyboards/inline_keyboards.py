@@ -123,3 +123,51 @@ def get_export_options():
         [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+def get_rating_keyboard(prefix: str):
+    buttons = [
+        [
+            InlineKeyboardButton(text="1️⃣", callback_data=f"{prefix}_1"),
+            InlineKeyboardButton(text="2️⃣", callback_data=f"{prefix}_2"),
+            InlineKeyboardButton(text="3️⃣", callback_data=f"{prefix}_3"),
+            InlineKeyboardButton(text="4️⃣", callback_data=f"{prefix}_4"),
+            InlineKeyboardButton(text="5️⃣", callback_data=f"{prefix}_5"),
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_emotion_keyboard(selected: list):
+    emotions = [
+        ("Fear 😨", "fear"), ("Greed 🤑", "greed"), ("FOMO 🏃", "fomo"),
+        ("Overconf 🦁", "overconfidence"), ("Anxiety 😰", "anxiety"),
+        ("Calm 🧘", "calm"), ("Excited 🤩", "excitement"), ("Frustr 😠", "frustration")
+    ]
+    
+    buttons = []
+    # 2 columns
+    for i in range(0, len(emotions), 2):
+        row = []
+        for emoji, code in emotions[i:i+2]:
+            text = f"{'✅ ' if code in selected else ''}{emoji}"
+            row.append(InlineKeyboardButton(text=text, callback_data=f"emote_{code}"))
+        buttons.append(row)
+    
+    buttons.append([InlineKeyboardButton(text="✅ Done", callback_data="emote_done")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_market_condition_keyboard():
+    buttons = [
+        [InlineKeyboardButton(text="📈 Trending Up", callback_data="mcond_trending-up")],
+        [InlineKeyboardButton(text="📉 Trending Down", callback_data="mcond_trending-down")],
+        [InlineKeyboardButton(text="↔️ Ranging / Sideways", callback_data="mcond_ranging")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_volatility_keyboard():
+    buttons = [
+        [InlineKeyboardButton(text="❄️ Low", callback_data="vol_low")],
+        [InlineKeyboardButton(text="🌪️ Medium", callback_data="vol_medium")],
+        [InlineKeyboardButton(text="🔥 High", callback_data="vol_high")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="menu_main")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

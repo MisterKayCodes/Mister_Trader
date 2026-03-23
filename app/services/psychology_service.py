@@ -35,6 +35,10 @@ def create_trade_psychology(
     discipline,
     confidence,
     followed_plan: bool,
+    decision_quality: int | None = None,
+    emotions: str | None = None,
+    market_condition: str | None = None,
+    volatility_level: str | None = None,
     notes: str | None = None,
 ) -> TradePsychology:
     """
@@ -57,6 +61,10 @@ def create_trade_psychology(
             discipline=discipline,
             confidence=confidence,
             followed_plan=followed_plan,
+            decision_quality=decision_quality,
+            emotions=emotions,
+            market_condition=market_condition,
+            volatility_level=volatility_level,
             notes=notes,
         )
         db.add(psychology)
@@ -102,6 +110,14 @@ def update_trade_psychology(
             psychology.confidence = update.confidence
         if update.followed_plan is not None:
             psychology.followed_plan = update.followed_plan
+        if update.decision_quality is not None:
+            psychology.decision_quality = update.decision_quality
+        if update.emotions is not None:
+            psychology.emotions = update.emotions
+        if update.market_condition is not None:
+            psychology.market_condition = update.market_condition
+        if update.volatility_level is not None:
+            psychology.volatility_level = update.volatility_level
         if update.notes is not None:
             psychology.notes = update.notes
 

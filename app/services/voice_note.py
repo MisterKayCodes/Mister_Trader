@@ -55,9 +55,16 @@ def delete_voice_note(db: Session, note_id: int, user_id: int) -> bool:
     note = get_voice_note(db, note_id, user_id)
     if not note:
         return False
+    file_path = note.file_path
+    
     try:
         db.delete(note)
         db.commit()
+        
+        # Rule 2: Delete from disk only after successful DB commit
+        if file_path:
+            from app.core.storage import delete_file
+            delete_file(file_path)
         return True
     except SQLAlchemyError as e:
         db.rollback()

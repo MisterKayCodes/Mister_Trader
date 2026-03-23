@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.v1.deps import get_current_user
@@ -21,9 +21,10 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
 @router.get("/stats")
 def get_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    account_id: int | None = Query(default=None, description="Optional account ID to filter stats")
 ):
-    stats = recalculate_user_stats(db, current_user.id)
+    stats = recalculate_user_stats(db, current_user.id, account_id=account_id)
     
     return {
         "total_trades": stats.total_trades,
@@ -85,9 +86,10 @@ def get_hourly_stats(
 @router.post("/refresh")
 def refresh_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    account_id: int | None = Query(default=None, description="Optional account ID to filter stats")
 ):
-    stats = recalculate_user_stats(db, current_user.id)
+    stats = recalculate_user_stats(db, current_user.id, account_id=account_id)
     return {"message": "Stats refreshed successfully", "total_trades": stats.total_trades}
 
 

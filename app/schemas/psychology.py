@@ -10,6 +10,10 @@ class TradePsychologyBase(BaseModel):
     discipline: DisciplineLevel
     confidence: ConfidenceLevel
     followed_plan: bool
+    decision_quality: Optional[int] = None
+    emotions: Optional[str] = None
+    market_condition: Optional[str] = None
+    volatility_level: Optional[str] = None
     notes: Optional[str] = Field(None, description="The 'Why' behind the trade (Rule 17)")
 
 class TradePsychologyCreate(TradePsychologyBase):
@@ -28,4 +32,8 @@ class TradePsychologyUpdate(BaseModel):
     discipline: Optional[DisciplineLevel] = None
     confidence: Optional[ConfidenceLevel] = None
     followed_plan: Optional[bool] = None
+    decision_quality: Optional[int] = None
+    emotions: Optional[str] = None
+    market_condition: Optional[str] = None
+    volatility_level: Optional[str] = None
     notes: Optional[str] = None

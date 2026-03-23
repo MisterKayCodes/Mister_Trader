@@ -31,6 +31,10 @@ def create_trade_psychology(
             discipline=payload.discipline,
             confidence=payload.confidence,
             followed_plan=payload.followed_plan,
+            decision_quality=payload.decision_quality,
+            emotions=payload.emotions,
+            market_condition=payload.market_condition,
+            volatility_level=payload.volatility_level,
             notes=payload.notes,
         )
     except ValueError as e:

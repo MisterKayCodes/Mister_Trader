@@ -28,12 +28,17 @@ def create_or_update_user_stats(db: Session, user_id: int) -> UserStats:
     return stats
 
 
-def recalculate_user_stats(db: Session, user_id: int) -> UserStats:
+def recalculate_user_stats(db: Session, user_id: int, account_id: Optional[int] = None) -> UserStats:
     stats = create_or_update_user_stats(db, user_id)
     
-    trades_stmt = select(Trade).where(
-        and_(Trade.user_id == user_id, Trade.state == "closed")
-    ).order_by(Trade.close_timestamp)
+    filters = [
+        Trade.user_id == user_id,
+        func.lower(Trade.state) == "closed"
+    ]
+    if account_id is not None:
+        filters.append(Trade.account_id == account_id)
+    
+    trades_stmt = select(Trade).where(and_(*filters)).order_by(Trade.close_timestamp)
     trades = db.scalars(trades_stmt).all()
     
     outcomes = []
@@ -143,7 +148,7 @@ def get_strategy_performance(db: Session, user_id: int) -> List[Dict[str, Any]]:
     performance = []
     for strategy in strategies:
         trades_stmt = select(Trade).where(
-            and_(Trade.user_id == user_id, Trade.strategy_id == strategy.id, Trade.state == "closed")
+            and_(Trade.user_id == user_id, Trade.strategy_id == strategy.id, func.lower(Trade.state) == "closed")
         )
         trades = db.scalars(trades_stmt).all()
         
@@ -171,7 +176,7 @@ def get_strategy_performance(db: Session, user_id: int) -> List[Dict[str, Any]]:
 
 def get_hourly_performance(db: Session, user_id: int) -> Dict[int, Dict[str, int]]:
     trades_stmt = select(Trade).where(
-        and_(Trade.user_id == user_id, Trade.state == "closed")
+        and_(Trade.user_id == user_id, func.lower(Trade.state) == "closed")
     )
     trades = db.scalars(trades_stmt).all()
     
@@ -232,7 +237,7 @@ def format_session_comparison(stats: UserStats) -> str:
 
 def get_day_of_week_performance(db: Session, user_id: int) -> Dict[int, Dict[str, Any]]:
     trades_stmt = select(Trade).where(
-        and_(Trade.user_id == user_id, Trade.state == "closed")
+        and_(Trade.user_id == user_id, func.lower(Trade.state) == "closed")
     )
     trades = db.scalars(trades_stmt).all()
     
@@ -268,7 +273,7 @@ def get_day_of_week_performance(db: Session, user_id: int) -> Dict[int, Dict[str
 
 def get_symbol_performance(db: Session, user_id: int) -> List[Dict[str, Any]]:
     trades_stmt = select(Trade).where(
-        and_(Trade.user_id == user_id, Trade.state == "closed")
+        and_(Trade.user_id == user_id, func.lower(Trade.state) == "closed")
     )
     trades = db.scalars(trades_stmt).all()
     
@@ -303,7 +308,7 @@ def get_symbol_performance(db: Session, user_id: int) -> List[Dict[str, Any]]:
 
 def get_psychology_insights(db: Session, user_id: int) -> Dict[str, Any]:
     trades_stmt = select(Trade).where(
-        and_(Trade.user_id == user_id, Trade.state == "closed")
+        and_(Trade.user_id == user_id, func.lower(Trade.state) == "closed")
     )
     trades = db.scalars(trades_stmt).all()
     

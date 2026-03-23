@@ -33,3 +33,4 @@ class TradeMedia(Base):
 
     # Rule 13: Explicit relationships
     user = relationship("User", backref="media")
+    trade = relationship("Trade", backref="media")

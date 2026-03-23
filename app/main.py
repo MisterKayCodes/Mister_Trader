@@ -73,6 +73,7 @@ app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(strategy.router, prefix="/api/v1")
 app.include_router(trading_plan.router, prefix="/api/v1")
 app.include_router(export.router, prefix="/api/v1")
+<<<<<<< HEAD
 
 REACT_BUILD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "react", "dist")
 if os.path.exists(REACT_BUILD_DIR):
@@ -93,3 +94,5 @@ if os.path.exists(REACT_BUILD_DIR):
             return FileResponse(index_path, headers={"Cache-Control": "no-cache"})
         
         return JSONResponse({"detail": "Not found"}, status_code=404)
+=======
+>>>>>>> 9e6925a (Syncing latest local changes for deployment)

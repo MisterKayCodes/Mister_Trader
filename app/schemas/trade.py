@@ -20,6 +20,7 @@ class TradeBase(BaseModel):
     pre_trade_emotion: Optional[str] = None
     post_trade_emotion: Optional[str] = None
     day_of_week: Optional[int] = None
+    notes: Optional[str] = None
 
 class TradeCreate(TradeBase):
     account_id: int
@@ -30,7 +31,7 @@ class TradeRead(TradeBase):
     user_id: int
     pnl: Optional[float] = None
     outcome: Optional[str] = None
-    notes: Optional[str] = None
+
     created_at: datetime
     updated_at: datetime
 

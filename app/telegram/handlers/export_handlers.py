@@ -8,7 +8,11 @@ from aiogram.fsm.context import FSMContext
 
 logger = logging.getLogger(__name__)
 router = Router()
+<<<<<<< HEAD
 BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+=======
+BOT_BACKEND_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:5000")
+>>>>>>> 9e6925a (Syncing latest local changes for deployment)
 
 
 @router.message(F.text == "📥 Export")

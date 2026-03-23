@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, ForeignKey, Enum, Boolean, DateTime, Text
+from sqlalchemy import Column, Integer, ForeignKey, Enum, Boolean, DateTime, Text, String
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -35,6 +35,10 @@ class TradePsychology(Base):
     discipline = Column(Enum(DisciplineLevel), nullable=False)
     confidence = Column(Enum(ConfidenceLevel), nullable=False)
     followed_plan = Column(Boolean, nullable=False)
+    decision_quality = Column(Integer, nullable=True) # 1-5 rating
+    emotions = Column(Text, nullable=True) # Comma-separated or JSON string of emotion IDs
+    market_condition = Column(String(50), nullable=True)
+    volatility_level = Column(String(50), nullable=True)
     notes = Column(Text, nullable=True)
 
     created_at = Column(

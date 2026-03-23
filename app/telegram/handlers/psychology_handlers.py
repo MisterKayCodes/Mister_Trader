@@ -112,7 +112,7 @@ async def process_trade_selection(callback: CallbackQuery, state: FSMContext):
         f"<b>Trade ID {trade_id}</b>\n\n"
         f"📊 <b>Rate your discipline (1-5):</b>\n"
         f"1 = Poor, 5 = Excellent",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=btns),
+        reply_markup=ik.get_rating_keyboard("disc"),
         parse_mode="HTML"
     )
     await state.set_state(PsychologyStates.waiting_for_discipline)
@@ -137,7 +137,7 @@ async def process_discipline(callback: CallbackQuery, state: FSMContext):
         f"<b>Discipline:</b> {discipline}/5 ✅\n\n"
         f"💪 <b>Rate your confidence (1-5):</b>\n"
         f"1 = Very Low, 5 = Very High",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=btns),
+        reply_markup=ik.get_rating_keyboard("conf"),
         parse_mode="HTML"
     )
     await state.set_state(PsychologyStates.waiting_for_confidence)
@@ -148,6 +148,74 @@ async def process_confidence(callback: CallbackQuery, state: FSMContext):
     confidence = int(callback.data.split("_")[1])
     await state.update_data(psych_confidence=confidence)
     
+    await callback.message.edit_text(
+        f"<b>Confidence:</b> {confidence}/5 ✅\n\n"
+        f"🎯 <b>Rate your Decision Quality (1-5):</b>\n"
+        f"1 = Poor, 5 = System Perfect",
+        reply_markup=ik.get_rating_keyboard("dqual"),
+        parse_mode="HTML"
+    )
+    await state.set_state(PsychologyStates.waiting_for_decision_quality)
+    await callback.answer()
+
+@router.callback_query(PsychologyStates.waiting_for_decision_quality, F.data.startswith("dqual_"))
+async def process_decision_quality(callback: CallbackQuery, state: FSMContext):
+    dqual = int(callback.data.split("_")[1])
+    await state.update_data(psych_decision_quality=dqual)
+    
+    await callback.message.edit_text(
+        f"<b>Decision Quality:</b> {dqual}/5 ✅\n\n"
+        f"🎭 <b>Select your Emotions (Multiple):</b>",
+        reply_markup=ik.get_emotion_keyboard([]),
+        parse_mode="HTML"
+    )
+    await state.set_state(PsychologyStates.waiting_for_emotions)
+    await callback.answer()
+
+@router.callback_query(PsychologyStates.waiting_for_emotions, F.data.startswith("emote_"))
+async def process_emotions(callback: CallbackQuery, state: FSMContext):
+    action = callback.data.split("_")[1]
+    data = await state.get_data() or {}
+    selected = data.get("psych_emotions", [])
+    
+    if action == "done":
+        await callback.message.edit_text(
+            f"<b>Emotions:</b> {', '.join(selected) if selected else 'None'} ✅\n\n"
+            f"📉 <b>What was the Market Condition?</b>",
+            reply_markup=ik.get_market_condition_keyboard(),
+            parse_mode="HTML"
+        )
+        await state.set_state(PsychologyStates.waiting_for_market_condition)
+    else:
+        if action in selected:
+            selected.remove(action)
+        else:
+            selected.append(action)
+        
+        await state.update_data(psych_emotions=selected)
+        await callback.message.edit_reply_markup(reply_markup=ik.get_emotion_keyboard(selected))
+    
+    await callback.answer()
+
+@router.callback_query(PsychologyStates.waiting_for_market_condition, F.data.startswith("mcond_"))
+async def process_market_condition(callback: CallbackQuery, state: FSMContext):
+    mcond = callback.data.split("_")[1]
+    await state.update_data(psych_market_condition=mcond)
+    
+    await callback.message.edit_text(
+        f"<b>Market Condition:</b> {mcond} ✅\n\n"
+        f"🌪️ <b>What was the Volatility?</b>",
+        reply_markup=ik.get_volatility_keyboard(),
+        parse_mode="HTML"
+    )
+    await state.set_state(PsychologyStates.waiting_for_volatility)
+    await callback.answer()
+
+@router.callback_query(PsychologyStates.waiting_for_volatility, F.data.startswith("vol_"))
+async def process_volatility(callback: CallbackQuery, state: FSMContext):
+    vol = callback.data.split("_")[1]
+    await state.update_data(psych_volatility_level=vol)
+    
     btns = [
         [
             InlineKeyboardButton(text="✅ Yes", callback_data="plan_true"),
@@ -155,10 +223,8 @@ async def process_confidence(callback: CallbackQuery, state: FSMContext):
         ]
     ]
     
-    data = await state.get_data()
     await callback.message.edit_text(
-        f"<b>Discipline:</b> {data['psych_discipline']}/5 ✅\n"
-        f"<b>Confidence:</b> {confidence}/5 ✅\n\n"
+        f"<b>Volatility:</b> {vol} ✅\n\n"
         f"📋 <b>Did you follow your trading plan?</b>",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=btns),
         parse_mode="HTML"
@@ -194,6 +260,10 @@ async def process_notes_and_submit(message: Message, state: FSMContext):
         "discipline": _int_to_level(data["psych_discipline"]),
         "confidence": _int_to_level(data["psych_confidence"]),
         "followed_plan": data["psych_followed_plan"],
+        "decision_quality": data.get("psych_decision_quality"),
+        "emotions": ",".join(data.get("psych_emotions", [])),
+        "market_condition": data.get("psych_market_condition"),
+        "volatility_level": data.get("psych_volatility_level"),
         "notes": notes
     }
     
@@ -212,6 +282,7 @@ async def process_notes_and_submit(message: Message, state: FSMContext):
                     f"✅ <b>Psychology logged!</b>\n\n"
                     f"📊 Discipline: {data['psych_discipline']}/5\n"
                     f"💪 Confidence: {data['psych_confidence']}/5\n"
+                    f"🎯 Decision: {data['psych_decision_quality']}/5\n"
                     f"📋 Followed Plan: {'Yes ✅' if data['psych_followed_plan'] else 'No ❌'}",
                     reply_markup=get_main_menu(),
                     parse_mode="HTML"
@@ -341,6 +412,9 @@ async def show_trade_psychology(callback: CallbackQuery, state: FSMContext):
                 f"🧠 <b>Psychology for Trade {trade_id}</b>\n\n"
                 f"📊 Discipline: <code>{p.get('discipline', 'N/A')}/5</code>\n"
                 f"💪 Confidence: <code>{p.get('confidence', 'N/A')}/5</code>\n"
+                f"🎯 Decision: <code>{p.get('decision_quality', 'N/A')}/5</code>\n"
+                f"🎭 Emotions: <code>{p.get('emotions', 'None')}</code>\n"
+                f"📉 Market: <code>{p.get('market_condition', 'N/A')}</code>\n"
                 f"📋 Followed Plan: {'✅ Yes' if p.get('followed_plan') else '❌ No'}\n"
                 f"📝 Notes: <code>{p.get('notes', 'None')}</code>"
             )
